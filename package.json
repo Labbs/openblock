@@ -1,0 +1,26 @@
+{
+  "name": "openblock",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A fully open-source, framework-agnostic rich text editor built on ProseMirror",
+  "license": "Apache-2.0",
+  "author": "OpenBlock Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openblock/openblock"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "clean": "pnpm -r clean"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

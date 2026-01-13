@@ -1,0 +1,176 @@
+/**
+ * @openblock/core
+ *
+ * A fully open-source, framework-agnostic rich text editor built on ProseMirror.
+ * All APIs are PUBLIC - this is a core principle of OpenBlock.
+ *
+ * @example
+ * ```typescript
+ * import { OpenBlockEditor } from '@openblock/core';
+ *
+ * const editor = new OpenBlockEditor({
+ *   element: document.getElementById('editor'),
+ *   initialContent: [
+ *     { type: 'heading', props: { level: 1 }, content: [{ type: 'text', text: 'Hello', styles: {} }] },
+ *     { type: 'paragraph', content: [{ type: 'text', text: 'World', styles: {} }] },
+ *   ],
+ * });
+ *
+ * // Access ProseMirror directly - no private API hacking!
+ * editor.pm.view        // EditorView
+ * editor.pm.state       // EditorState
+ * editor.pm.dispatch(tr) // Dispatch transaction
+ * ```
+ *
+ * @packageDocumentation
+ */
+
+// ===========================================================================
+// EDITOR
+// ===========================================================================
+
+export { OpenBlockEditor, defaultConfig } from './editor';
+export type { EditorConfig, EditorEvents, EventHandler } from './editor';
+
+// ===========================================================================
+// PROSEMIRROR API - THE KEY DIFFERENTIATOR
+// ===========================================================================
+
+export { ProseMirrorAPI } from './pm';
+export type { WidgetDecorationSpec, Coords, PosInfo, Command } from './pm';
+
+// Re-export ProseMirror classes for convenience
+export {
+  EditorView,
+  EditorState,
+  Transaction,
+  Selection,
+  TextSelection,
+  NodeSelection,
+  AllSelection,
+  Plugin,
+  PluginKey,
+  Decoration,
+  DecorationSet,
+  Node,
+  Schema,
+  Mark,
+  MarkType,
+  NodeType,
+  ResolvedPos,
+  Slice,
+  Fragment,
+} from './pm';
+
+// ===========================================================================
+// SCHEMA
+// ===========================================================================
+
+export { createSchema, DEFAULT_NODES, DEFAULT_MARKS } from './schema';
+
+// Node specs
+export {
+  docNode,
+  paragraphNode,
+  headingNode,
+  textNode,
+  blockquoteNode,
+  codeBlockNode,
+  dividerNode,
+  bulletListNode,
+  orderedListNode,
+  listItemNode,
+} from './schema';
+
+// Mark specs
+export {
+  boldMark,
+  italicMark,
+  underlineMark,
+  strikethroughMark,
+  codeMark,
+  linkMark,
+} from './schema';
+
+// ===========================================================================
+// BLOCKS
+// ===========================================================================
+
+export { blockToNode, nodeToBlock, blocksToDoc, docToBlocks } from './blocks';
+export type {
+  Block,
+  PartialBlock,
+  BlockIdentifier,
+  BlockPlacement,
+  TextStyles,
+  StyledText,
+  LinkContent,
+  InlineContent,
+} from './blocks';
+
+// ===========================================================================
+// PLUGINS
+// ===========================================================================
+
+export { createPlugins, createBlockIdPlugin, BLOCK_ID_PLUGIN_KEY } from './plugins';
+export type { CreatePluginsOptions } from './plugins';
+
+// Input rules
+export {
+  createInputRulesPlugin,
+  headingRule,
+  bulletListRule,
+  orderedListRule,
+  blockquoteRule,
+  codeBlockRule,
+  dividerRule,
+  boldRule,
+  italicRule,
+  inlineCodeRule,
+  strikethroughRule,
+} from './plugins';
+export type { InputRulesConfig } from './plugins';
+
+// Drag & drop
+export {
+  createDragDropPlugin,
+  DRAG_DROP_PLUGIN_KEY,
+  getBlockPosFromHandle,
+  moveBlock,
+} from './plugins';
+export type { DragDropConfig, DragDropState } from './plugins';
+
+// Slash menu
+export {
+  createSlashMenuPlugin,
+  SLASH_MENU_PLUGIN_KEY,
+  closeSlashMenu,
+  executeSlashCommand,
+  getDefaultSlashMenuItems,
+  filterSlashMenuItems,
+} from './plugins';
+export type { SlashMenuConfig, SlashMenuState, SlashMenuItem } from './plugins';
+
+// Bubble menu
+export {
+  createBubbleMenuPlugin,
+  BUBBLE_MENU_PLUGIN_KEY,
+  hideBubbleMenu,
+  isMarkActive,
+} from './plugins';
+export type { BubbleMenuConfig, BubbleMenuState, BlockTypeInfo, TextAlign } from './plugins';
+
+// ===========================================================================
+// TYPES (additional schema/extension types)
+// ===========================================================================
+
+export type {
+  BlockSpec,
+  MarkSpec,
+  PropSpec,
+  PropType,
+  ContentType,
+  Extension,
+  CommandFn,
+} from './types';
+

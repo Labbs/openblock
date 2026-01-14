@@ -14,10 +14,10 @@ importers:
 
   examples/basic:
     dependencies:
-      '@openblock/core':
+      '@labbs/openblock-core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@openblock/react':
+      '@labbs/openblock-react':
         specifier: workspace:*
         version: link:../../packages/react
       react:
@@ -97,7 +97,7 @@ importers:
 
   packages/react:
     dependencies:
-      '@openblock/core':
+      '@labbs/openblock-core':
         specifier: workspace:*
         version: link:../core
       react:

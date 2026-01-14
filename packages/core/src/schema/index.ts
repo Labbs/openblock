@@ -20,6 +20,12 @@ export {
   bulletListNode,
   orderedListNode,
   listItemNode,
+  columnListNode,
+  columnNode,
+  tableNode,
+  tableRowNode,
+  tableCellNode,
+  tableHeaderNode,
 } from './nodes';
 export type { TextAlignment } from './nodes';
 

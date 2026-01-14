@@ -60,6 +60,12 @@ export function blockToNode(schema: Schema, block: Block): PMNode {
     return nodeType.create(attrs, [paragraph]);
   }
 
+  // Handle table cells - they need block content (default to paragraph if only inline content)
+  if ((block.type === 'tableCell' || block.type === 'tableHeader') && block.content && !block.children) {
+    const paragraph = schema.node('paragraph', null, inlineContentToNodes(schema, block.content));
+    return nodeType.create(attrs, [paragraph]);
+  }
+
   // Handle leaf blocks with no content (divider)
   if (!block.content || block.content.length === 0) {
     // Check if node type allows empty content

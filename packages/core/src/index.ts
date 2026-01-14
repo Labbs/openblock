@@ -80,6 +80,12 @@ export {
   bulletListNode,
   orderedListNode,
   listItemNode,
+  columnListNode,
+  columnNode,
+  tableNode,
+  tableRowNode,
+  tableCellNode,
+  tableHeaderNode,
 } from './schema';
 
 // Mark specs
@@ -107,6 +113,30 @@ export type {
   LinkContent,
   InlineContent,
 } from './blocks';
+
+// ===========================================================================
+// COMMANDS
+// ===========================================================================
+
+export {
+  addRowAfter,
+  addRowBefore,
+  deleteRow,
+  addColumnAfter,
+  addColumnBefore,
+  deleteColumn,
+  deleteTable,
+  goToNextCell,
+  goToPreviousCell,
+  isInTable,
+  getTableInfo,
+  findTableContext,
+  addRowAtIndex,
+  addColumnAtIndex,
+  deleteRowAtIndex,
+  deleteColumnAtIndex,
+} from './commands';
+export type { TableContext } from './commands';
 
 // ===========================================================================
 // PLUGINS
@@ -159,6 +189,10 @@ export {
   isMarkActive,
 } from './plugins';
 export type { BubbleMenuConfig, BubbleMenuState, BlockTypeInfo, TextAlign } from './plugins';
+
+// Table plugin
+export { createTablePlugin, TABLE_PLUGIN_KEY } from './plugins';
+export type { TablePluginConfig } from './plugins';
 
 // ===========================================================================
 // TYPES (additional schema/extension types)

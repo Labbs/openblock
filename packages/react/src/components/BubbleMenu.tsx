@@ -27,7 +27,7 @@ import {
   BubbleMenuState,
   BlockTypeInfo,
   TextAlign,
-} from '@openblock/core';
+} from '@labbs/openblock-core';
 import { LinkPopover } from './LinkPopover';
 import { ColorPicker } from './ColorPicker';
 

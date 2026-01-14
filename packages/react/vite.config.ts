@@ -20,7 +20,7 @@ export default defineConfig({
         'react',
         'react-dom',
         'react/jsx-runtime',
-        '@openblock/core',
+        '@labbs/openblock-core',
         'prosemirror-commands',
         'prosemirror-dropcursor',
         'prosemirror-gapcursor',

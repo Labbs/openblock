@@ -61,3 +61,6 @@ export {
 } from './multiBlockSelectionPlugin';
 export type { MultiBlockSelectionConfig, MultiBlockSelectionState } from './multiBlockSelectionPlugin';
 
+export { createTablePlugin, TABLE_PLUGIN_KEY } from './tablePlugin';
+export type { TablePluginConfig } from './tablePlugin';
+

@@ -1,20 +1,20 @@
-# @openblock/react
+# @labbs/openblock-react
 
 React bindings for the OpenBlock rich text editor.
 
 ## Installation
 
 ```bash
-npm install @openblock/react @openblock/core
+npm install @labbs/openblock-react @labbs/openblock-core
 # or
-pnpm add @openblock/react @openblock/core
+pnpm add @labbs/openblock-react @labbs/openblock-core
 ```
 
 ## Quick Start
 
 ```tsx
-import { useOpenBlock, OpenBlockView } from '@openblock/react';
-import '@openblock/core/styles/editor.css';
+import { useOpenBlock, OpenBlockView } from '@labbs/openblock-react';
+import '@labbs/openblock-core/styles/editor.css';
 
 function MyEditor() {
   const editor = useOpenBlock({

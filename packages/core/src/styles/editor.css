@@ -764,25 +764,89 @@
 }
 
 /* ===========================================================================
- * Table (for future)
+ * Table
  * =========================================================================== */
 
-.openblock-editor table {
+.openblock-editor table,
+.openblock-editor .ob-table {
   border-collapse: collapse;
-  width: 100%;
-  margin: 0;
+  width: calc(100% - 28px); /* Leave space for the column extend button */
+  margin: 0.5em 0 28px 0; /* Leave space at bottom for the row extend button */
+  table-layout: fixed;
 }
 
 .openblock-editor th,
-.openblock-editor td {
+.openblock-editor td,
+.openblock-editor .ob-table-cell,
+.openblock-editor .ob-table-header {
   border: 1px solid hsl(var(--ob-border));
   padding: 0.5em 0.75em;
   text-align: left;
+  vertical-align: top;
+  position: relative;
+  min-width: 50px;
 }
 
-.openblock-editor th {
+/* Header cells */
+.openblock-editor th,
+.openblock-editor .ob-table-header {
   background: hsl(var(--ob-muted));
   font-weight: 600;
+}
+
+/* Table row */
+.openblock-editor .ob-table-row {
+  /* No special styles needed, just a container */
+}
+
+/* Cell content - reset paragraph margins */
+.openblock-editor .ob-table-cell > p,
+.openblock-editor .ob-table-header > p,
+.openblock-editor td > p,
+.openblock-editor th > p {
+  margin: 0;
+}
+
+/* Cell content - first paragraph */
+.openblock-editor .ob-table-cell > p:first-child,
+.openblock-editor .ob-table-header > p:first-child {
+  margin-top: 0;
+}
+
+/* Cell content - last paragraph */
+.openblock-editor .ob-table-cell > p:last-child,
+.openblock-editor .ob-table-header > p:last-child {
+  margin-bottom: 0;
+}
+
+/* Selected cell */
+.openblock-editor .ob-table-cell.selectedCell,
+.openblock-editor .ob-table-header.selectedCell {
+  background: hsl(220 90% 56% / 0.1);
+}
+
+/* Cell resize handle (for future column resize) */
+.openblock-editor .ob-table-cell-resize-handle,
+.openblock-editor .ob-table-header-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 10;
+}
+
+.openblock-editor .ob-table-cell-resize-handle:hover,
+.openblock-editor .ob-table-header-resize-handle:hover {
+  background: hsl(var(--ob-primary) / 0.3);
+}
+
+/* Table wrapper for overflow handling */
+.openblock-editor .ob-table-wrapper {
+  overflow-x: auto;
+  margin: 0.5em 0;
 }
 
 /* ===========================================================================
@@ -1112,5 +1176,377 @@
   content: 'Type something...';
   color: hsl(var(--ob-muted-foreground));
   pointer-events: none;
+}
+
+/* ===========================================================================
+ * Table Menu (Floating Toolbar)
+ * =========================================================================== */
+
+.ob-table-menu {
+  /* Define variables locally since menu is outside editor */
+  --ob-foreground: var(--foreground, 222 47% 11%);
+  --ob-background: var(--background, 0 0% 100%);
+  --ob-muted: var(--muted, 210 40% 96%);
+  --ob-muted-foreground: var(--muted-foreground, 215 16% 47%);
+  --ob-border: var(--border, 214 32% 91%);
+  --ob-primary: var(--primary, 222 47% 11%);
+  --ob-destructive: var(--destructive, 0 84% 60%);
+  --ob-radius: var(--radius, 0.5rem);
+
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: hsl(var(--ob-background));
+  border: 1px solid hsl(var(--ob-border));
+  border-radius: var(--ob-radius);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
+  padding: 4px 8px;
+  animation: ob-table-menu-fade-in 0.15s ease-out;
+}
+
+@keyframes ob-table-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ob-table-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: hsl(var(--ob-muted-foreground));
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ob-table-menu-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ob-table-menu-btn:hover {
+  background: hsl(var(--ob-muted));
+  color: hsl(var(--ob-foreground));
+}
+
+.ob-table-menu-btn--danger {
+  color: hsl(var(--ob-destructive));
+}
+
+.ob-table-menu-btn--danger:hover {
+  background: hsl(var(--ob-destructive) / 0.1);
+  color: hsl(var(--ob-destructive));
+}
+
+.ob-table-menu-divider {
+  width: 1px;
+  height: 20px;
+  background: hsl(var(--ob-border));
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.ob-table-menu-info {
+  font-size: 11px;
+  color: hsl(var(--ob-muted-foreground));
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+/* Table Menu Dropdown */
+.ob-table-menu-dropdown {
+  position: relative;
+}
+
+.ob-table-menu-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: hsl(var(--ob-foreground));
+  cursor: pointer;
+  transition: background 0.15s ease;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ob-table-menu-dropdown-btn:hover {
+  background: hsl(var(--ob-muted));
+}
+
+.ob-table-menu-dropdown-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: hsl(var(--ob-muted-foreground));
+}
+
+.ob-table-menu-dropdown-icon svg {
+  width: 14px;
+  height: 14px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ob-table-menu-dropdown-label {
+  min-width: 40px;
+}
+
+.ob-table-menu-dropdown-chevron {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: hsl(var(--ob-muted-foreground));
+  transition: transform 0.15s ease;
+}
+
+.ob-table-menu-dropdown-chevron--open {
+  transform: rotate(180deg);
+}
+
+.ob-table-menu-dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: hsl(var(--ob-background));
+  border: 1px solid hsl(var(--ob-border));
+  border-radius: var(--ob-radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  min-width: 180px;
+  z-index: 1001;
+  animation: ob-dropdown-fade-in 0.12s ease-out;
+}
+
+.ob-table-menu-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--ob-radius) - 2px);
+  color: hsl(var(--ob-foreground));
+  cursor: pointer;
+  transition: background 0.1s ease;
+  text-align: left;
+  font-size: 13px;
+}
+
+.ob-table-menu-dropdown-item:hover {
+  background: hsl(var(--ob-muted));
+}
+
+.ob-table-menu-dropdown-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ob-table-menu-dropdown-item:disabled:hover {
+  background: transparent;
+}
+
+.ob-table-menu-dropdown-item svg {
+  width: 16px;
+  height: 16px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: hsl(var(--ob-muted-foreground));
+  flex-shrink: 0;
+}
+
+.ob-table-menu-dropdown-item span {
+  flex: 1;
+}
+
+.ob-table-menu-dropdown-item--danger {
+  color: hsl(var(--ob-destructive));
+}
+
+.ob-table-menu-dropdown-item--danger svg {
+  color: hsl(var(--ob-destructive));
+}
+
+.ob-table-menu-dropdown-item--danger:hover {
+  background: hsl(var(--ob-destructive) / 0.1);
+}
+
+/* ===========================================================================
+ * Table Handles (Row/Column manipulation)
+ * =========================================================================== */
+
+.ob-table-handles {
+  pointer-events: none;
+  z-index: 100;
+}
+
+.ob-table-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: auto;
+}
+
+.ob-table-handle--visible {
+  opacity: 1;
+}
+
+.ob-table-handle--row {
+  width: 24px;
+}
+
+.ob-table-handle--col {
+  height: 24px;
+}
+
+.ob-table-handle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: hsl(var(--ob-background, 0 0% 100%));
+  border: 1px solid hsl(var(--ob-border, 214 32% 91%));
+  border-radius: 4px;
+  color: hsl(var(--ob-muted-foreground, 215 16% 47%));
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.ob-table-handle-btn:hover {
+  background: hsl(var(--ob-muted, 210 40% 96%));
+  color: hsl(var(--ob-foreground, 222 47% 11%));
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ob-table-handle-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Handle dropdown menu */
+.ob-table-handle-menu {
+  position: fixed;
+  background: hsl(var(--ob-background, 0 0% 100%));
+  border: 1px solid hsl(var(--ob-border, 214 32% 91%));
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  padding: 4px;
+  min-width: 150px;
+  z-index: 1001;
+  animation: ob-dropdown-fade-in 0.12s ease-out;
+}
+
+.ob-table-handle-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: hsl(var(--ob-foreground, 222 47% 11%));
+  cursor: pointer;
+  transition: background 0.1s ease;
+  text-align: left;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ob-table-handle-menu button:hover {
+  background: hsl(var(--ob-muted, 210 40% 96%));
+}
+
+.ob-table-handle-menu button svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.ob-table-handle-menu-danger {
+  color: hsl(var(--ob-destructive, 0 84% 60%)) !important;
+}
+
+.ob-table-handle-menu-danger:hover {
+  background: hsl(var(--ob-destructive, 0 84% 60%) / 0.1) !important;
+}
+
+/* Extend buttons (+ buttons) - full height/width bars */
+.ob-table-extend-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: hsl(var(--ob-muted-foreground, 215 16% 47%) / 0.15);
+  color: hsl(var(--ob-muted-foreground, 215 16% 47%));
+  cursor: pointer;
+  transition: all 0.15s ease;
+  opacity: 0;
+  pointer-events: auto;
+  border-radius: 4px;
+}
+
+.ob-table-extend-btn--visible,
+.ob-table-handles:hover .ob-table-extend-btn {
+  opacity: 1;
+}
+
+.ob-table-extend-btn:hover {
+  color: hsl(var(--ob-foreground, 222 47% 11%));
+  background: hsl(var(--ob-muted-foreground, 215 16% 47%) / 0.3);
+}
+
+.ob-table-extend-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Column extend button - vertical bar on right */
+.ob-table-extend-btn--col {
+  width: 20px;
+}
+
+/* Row extend button - horizontal bar on bottom */
+.ob-table-extend-btn--row {
+  height: 20px;
+}
+
+/* Hide side menu inside table cells */
+.ob-table-cell .ob-side-menu,
+.ob-table-header .ob-side-menu,
+td .ob-side-menu,
+th .ob-side-menu,
+.openblock-editor table .ob-side-menu {
+  display: none !important;
 }
 

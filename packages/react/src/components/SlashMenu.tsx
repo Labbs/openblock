@@ -30,7 +30,7 @@ import {
   filterSlashMenuItems,
   executeSlashCommand,
   closeSlashMenu,
-} from '@openblock/core';
+} from '@labbs/openblock-core';
 
 /**
  * Props for SlashMenu component.

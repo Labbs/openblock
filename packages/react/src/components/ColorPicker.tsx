@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
-import { OpenBlockEditor } from '@openblock/core';
+import { OpenBlockEditor } from '@labbs/openblock-core';
 
 /**
  * Color option definition.

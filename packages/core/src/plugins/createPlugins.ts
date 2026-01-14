@@ -18,6 +18,7 @@ import { createDragDropPlugin, DragDropConfig } from './dragDropPlugin';
 import { createSlashMenuPlugin, SlashMenuConfig } from './slashMenuPlugin';
 import { createBubbleMenuPlugin, BubbleMenuConfig } from './bubbleMenuPlugin';
 import { createMultiBlockSelectionPlugin, MultiBlockSelectionConfig } from './multiBlockSelectionPlugin';
+import { createTablePlugin, TablePluginConfig } from './tablePlugin';
 
 /**
  * Options for creating plugins.
@@ -71,6 +72,13 @@ export interface CreatePluginsOptions {
   multiBlockSelection?: MultiBlockSelectionConfig | false;
 
   /**
+   * Configuration for table editing (Tab navigation, row/column shortcuts).
+   * Set to false to disable table editing.
+   * @default true (enabled with default config)
+   */
+  table?: TablePluginConfig | false;
+
+  /**
    * Additional plugins to include.
    */
   additionalPlugins?: Plugin[];
@@ -107,7 +115,7 @@ export interface CreatePluginsOptions {
  * @returns Array of ProseMirror plugins
  */
 export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
-  const { schema, toggleMark, inputRules, dragDrop, slashMenu, bubbleMenu, multiBlockSelection, additionalPlugins = [] } = options;
+  const { schema, toggleMark, inputRules, dragDrop, slashMenu, bubbleMenu, multiBlockSelection, table, additionalPlugins = [] } = options;
 
   const plugins: Plugin[] = [
     // History for undo/redo
@@ -170,6 +178,12 @@ export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
   if (multiBlockSelection !== false) {
     const multiBlockConfig = typeof multiBlockSelection === 'object' ? multiBlockSelection : {};
     plugins.push(createMultiBlockSelectionPlugin(multiBlockConfig));
+  }
+
+  // Add table editing plugin
+  if (table !== false) {
+    const tableConfig = typeof table === 'object' ? table : {};
+    plugins.push(createTablePlugin(tableConfig));
   }
 
   // Add user plugins

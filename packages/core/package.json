@@ -1,5 +1,5 @@
 {
-  "name": "@openblock/core",
+  "name": "@labbs/openblock-core",
   "version": "0.0.1",
   "description": "Framework-agnostic core for OpenBlock editor",
   "license": "Apache-2.0",
@@ -47,5 +47,13 @@
   "peerDependencies": {},
   "sideEffects": [
     "*.css"
-  ]
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Labbs/openblock.git",
+    "directory": "packages/core"
+  }
 }

@@ -31,6 +31,7 @@
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  overflow: visible;
 }
 
 @media (max-width: 1024px) {
@@ -74,6 +75,7 @@
 .editor-section {
   display: flex;
   flex-direction: column;
+  overflow: visible;
 }
 
 .editor-wrapper {
@@ -82,7 +84,12 @@
   border: 1px solid #ddd;
   border-radius: 0 0 8px 8px;
   min-height: 400px;
-  overflow: auto;
+  overflow: hidden;
+}
+
+/* Allow table handles to overflow */
+.editor-wrapper .ob-table-handles {
+  overflow: visible;
 }
 
 .editor-wrapper .openblock-editor {

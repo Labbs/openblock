@@ -1,6 +1,6 @@
-import { useOpenBlock, OpenBlockView, useEditorContent, SlashMenu, BubbleMenu } from '@openblock/react';
+import { useOpenBlock, OpenBlockView, useEditorContent, SlashMenu, BubbleMenu, TableHandles } from '@labbs/openblock-react';
 import { sampleDocument } from './data';
-import '@openblock/core/styles/editor.css';
+import '@labbs/openblock-core/styles/editor.css';
 import './styles.css';
 
 export default function App() {
@@ -48,6 +48,7 @@ export default function App() {
             <OpenBlockView editor={editor} />
             <SlashMenu editor={editor} />
             <BubbleMenu editor={editor} />
+            <TableHandles editor={editor} />
           </div>
         </div>
 

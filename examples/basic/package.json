@@ -1,5 +1,5 @@
 {
-  "name": "@openblock/example-basic",
+  "name": "@labbs/openblock-example-basic",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@openblock/core": "workspace:*",
-    "@openblock/react": "workspace:*",
+    "@labbs/openblock-core": "workspace:*",
+    "@labbs/openblock-react": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

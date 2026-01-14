@@ -1,4 +1,4 @@
-import type { Block } from '@openblock/core';
+import type { Block } from '@labbs/openblock-core';
 
 /**
  * Sample document with all formatting options for testing.
@@ -247,6 +247,130 @@ export const sampleDocument: Block[] = [
   },
   {
     id: 'divider-3',
+    type: 'divider',
+    props: {},
+  },
+  {
+    id: 'heading-tables',
+    type: 'heading',
+    props: { level: 2 },
+    content: [{ type: 'text', text: 'Tables', styles: {} }],
+  },
+  {
+    id: 'para-tables-intro',
+    type: 'paragraph',
+    props: {},
+    content: [{ type: 'text', text: 'Tables support headers, multiple columns, and formatted content:', styles: {} }],
+  },
+  {
+    id: 'table-1',
+    type: 'table',
+    props: {},
+    children: [
+      {
+        id: 'table-row-header',
+        type: 'tableRow',
+        props: {},
+        children: [
+          {
+            id: 'header-cell-1',
+            type: 'tableHeader',
+            props: {},
+            content: [{ type: 'text', text: 'Feature', styles: { bold: true } }],
+          },
+          {
+            id: 'header-cell-2',
+            type: 'tableHeader',
+            props: {},
+            content: [{ type: 'text', text: 'Status', styles: { bold: true } }],
+          },
+          {
+            id: 'header-cell-3',
+            type: 'tableHeader',
+            props: {},
+            content: [{ type: 'text', text: 'Description', styles: { bold: true } }],
+          },
+        ],
+      },
+      {
+        id: 'table-row-1',
+        type: 'tableRow',
+        props: {},
+        children: [
+          {
+            id: 'cell-1-1',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Rich Text', styles: {} }],
+          },
+          {
+            id: 'cell-1-2',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Complete', styles: { bold: true } }],
+          },
+          {
+            id: 'cell-1-3',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Bold, italic, underline, code', styles: {} }],
+          },
+        ],
+      },
+      {
+        id: 'table-row-2',
+        type: 'tableRow',
+        props: {},
+        children: [
+          {
+            id: 'cell-2-1',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Columns', styles: {} }],
+          },
+          {
+            id: 'cell-2-2',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Complete', styles: { bold: true } }],
+          },
+          {
+            id: 'cell-2-3',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Resizable multi-column layouts', styles: {} }],
+          },
+        ],
+      },
+      {
+        id: 'table-row-3',
+        type: 'tableRow',
+        props: {},
+        children: [
+          {
+            id: 'cell-3-1',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Tables', styles: {} }],
+          },
+          {
+            id: 'cell-3-2',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'New', styles: { italic: true } }],
+          },
+          {
+            id: 'cell-3-3',
+            type: 'tableCell',
+            props: {},
+            content: [{ type: 'text', text: 'Header rows and data cells', styles: {} }],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'divider-4',
     type: 'divider',
     props: {},
   },

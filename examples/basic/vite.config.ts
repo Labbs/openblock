@@ -4,6 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: process.env.GITHUB_PAGES ? '/openblock/' : '/',
   resolve: {
     alias: {
       // Resolve @openblock packages to their dist folders in the monorepo

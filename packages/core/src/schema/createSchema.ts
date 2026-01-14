@@ -21,6 +21,10 @@ import {
   listItemNode,
   columnListNode,
   columnNode,
+  tableNode,
+  tableRowNode,
+  tableCellNode,
+  tableHeaderNode,
 } from './nodes';
 import {
   boldMark,
@@ -51,6 +55,10 @@ export const DEFAULT_NODES = {
   listItem: listItemNode,
   columnList: columnListNode,
   column: columnNode,
+  table: tableNode,
+  tableRow: tableRowNode,
+  tableCell: tableCellNode,
+  tableHeader: tableHeaderNode,
 };
 
 /**

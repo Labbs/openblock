@@ -6,7 +6,7 @@
  * @example
  * ```tsx
  * import { useOpenBlock, OpenBlockView } from '@openblock/react';
- * import '@openblock/core/styles/editor.css';
+ * import '@labbs/openblock-core/styles/editor.css';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock({
@@ -33,8 +33,8 @@ export {
 export type { UseOpenBlockOptions } from './hooks';
 
 // Components
-export { OpenBlockView, SlashMenu, BubbleMenu } from './components';
-export type { OpenBlockViewProps, OpenBlockViewRef, SlashMenuProps, BubbleMenuProps } from './components';
+export { OpenBlockView, SlashMenu, BubbleMenu, TableMenu, TableHandles } from './components';
+export type { OpenBlockViewProps, OpenBlockViewRef, SlashMenuProps, BubbleMenuProps, TableMenuProps, TableHandlesProps } from './components';
 
 // Re-export core types for convenience
 export type {
@@ -47,4 +47,4 @@ export type {
   TextStyles,
   StyledText,
   InlineContent,
-} from '@openblock/core';
+} from '@labbs/openblock-core';

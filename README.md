@@ -37,22 +37,30 @@ editor.pm.setNodeAttrs(pos, attrs)
 - **Block-based JSON** — Notion-like format, easy to store and transform
 - **Framework-agnostic** — Vanilla JS core with React bindings (Vue, Svelte coming)
 - **TypeScript first** — Full type safety throughout
-- **Rich block types** — Headings, lists, code blocks, columns, and more
-- **Built-in UI** — Slash menu, bubble menu, drag & drop
+- **Rich block types** — Headings, lists, code blocks, tables, columns, and more
+- **Built-in UI** — Slash menu, bubble menu, drag & drop, table handles
 
 ## Quick Start
 
 ### Installation
 
+First, configure npm to use GitHub Packages for the `@labbs` scope. Create or edit `.npmrc` in your project:
+
+```
+@labbs:registry=https://npm.pkg.github.com
+```
+
+Then install the packages:
+
 ```bash
-npm install @openblock/core @openblock/react
+npm install @labbs/openblock-core @labbs/openblock-react
 ```
 
 ### React
 
 ```tsx
-import { useOpenBlock, OpenBlockView, SlashMenu, BubbleMenu } from '@openblock/react';
-import '@openblock/core/styles/editor.css';
+import { useOpenBlock, OpenBlockView, SlashMenu, BubbleMenu, TableHandles } from '@labbs/openblock-react';
+import '@labbs/openblock-core/styles/editor.css';
 
 function Editor() {
   const editor = useOpenBlock({
@@ -71,6 +79,7 @@ function Editor() {
       <OpenBlockView editor={editor} />
       <SlashMenu editor={editor} />
       <BubbleMenu editor={editor} />
+      <TableHandles editor={editor} />
     </>
   );
 }
@@ -79,8 +88,8 @@ function Editor() {
 ### Vanilla JS
 
 ```typescript
-import { OpenBlockEditor } from '@openblock/core';
-import '@openblock/core/styles/editor.css';
+import { OpenBlockEditor } from '@labbs/openblock-core';
+import '@labbs/openblock-core/styles/editor.css';
 
 const editor = new OpenBlockEditor({
   initialContent: [/* blocks */],
@@ -122,6 +131,39 @@ editor.setBlockType('codeBlock', { language: 'typescript' })
 editor.setBlockType('bulletList')
 editor.setBlockType('orderedList')
 editor.setBlockType('blockquote')
+editor.setBlockType('table')
+```
+
+### Table Commands
+
+```typescript
+import {
+  addRowAfter,
+  addRowBefore,
+  deleteRow,
+  addColumnAfter,
+  addColumnBefore,
+  deleteColumn,
+  goToNextCell,
+  goToPreviousCell,
+  isInTable
+} from '@labbs/openblock-core';
+
+// Check if cursor is in a table
+if (isInTable(editor.pm.state)) {
+  // Add row after current row
+  addRowAfter(editor.pm.state, editor.pm.view.dispatch);
+
+  // Add column before current column
+  addColumnBefore(editor.pm.state, editor.pm.view.dispatch);
+
+  // Delete current row
+  deleteRow(editor.pm.state, editor.pm.view.dispatch);
+}
+
+// Navigate between cells (Tab / Shift+Tab)
+goToNextCell(editor.pm.state, editor.pm.view.dispatch);
+goToPreviousCell(editor.pm.state, editor.pm.view.dispatch);
 ```
 
 ### ProseMirror Access
@@ -158,16 +200,67 @@ const blocks = [
     type: 'paragraph',
     props: {},
     content: [{ type: 'text', text: 'Hello world', styles: {} }]
+  },
+  {
+    id: 'table-1',
+    type: 'table',
+    props: {},
+    children: [
+      {
+        id: 'row-1',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'header-1', type: 'tableHeader', props: {}, content: [{ type: 'text', text: 'Name', styles: {} }] },
+          { id: 'header-2', type: 'tableHeader', props: {}, content: [{ type: 'text', text: 'Value', styles: {} }] }
+        ]
+      },
+      {
+        id: 'row-2',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'cell-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Item', styles: {} }] },
+          { id: 'cell-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: '100', styles: {} }] }
+        ]
+      }
+    ]
   }
 ];
 ```
+
+## React Components
+
+### OpenBlockView
+The main editor component that renders the ProseMirror view.
+
+### SlashMenu
+Displays a command palette when typing `/` to insert blocks.
+
+### BubbleMenu
+Floating toolbar that appears when selecting text for formatting.
+
+### TableHandles
+Renders handles on tables for adding/removing rows and columns.
+
+```tsx
+import { TableHandles } from '@labbs/openblock-react';
+
+// Add to your editor
+<TableHandles editor={editor} />
+```
+
+When hovering over a table:
+- **Row handles** appear on the left — click to insert/delete rows
+- **Column handles** appear on top — click to insert/delete columns
+- **Extend buttons** appear on the right and bottom — click to add rows/columns
 
 ## Packages
 
 | Package | Description |
 |---------|-------------|
-| [@openblock/core](packages/core) | Framework-agnostic editor core |
-| [@openblock/react](packages/react) | React bindings and components |
+| [@labbs/openblock-core](packages/core) | Framework-agnostic editor core |
+| [@labbs/openblock-react](packages/react) | React bindings and components |
 
 ## Development
 

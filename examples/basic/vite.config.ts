@@ -7,10 +7,10 @@ export default defineConfig({
   base: process.env.GITHUB_PAGES ? '/openblock/' : '/',
   resolve: {
     alias: {
-      // Resolve @openblock packages to their dist folders in the monorepo
-      '@openblock/core/styles/editor.css': path.resolve(__dirname, '../../packages/core/dist/styles/editor.css'),
-      '@openblock/core': path.resolve(__dirname, '../../packages/core/dist'),
-      '@openblock/react': path.resolve(__dirname, '../../packages/react/dist'),
+      // Resolve @labbs/openblock packages to their dist folders in the monorepo
+      '@labbs/openblock-core/styles/editor.css': path.resolve(__dirname, '../../packages/core/dist/styles/editor.css'),
+      '@labbs/openblock-core': path.resolve(__dirname, '../../packages/core/dist'),
+      '@labbs/openblock-react': path.resolve(__dirname, '../../packages/react/dist'),
     },
   },
 });

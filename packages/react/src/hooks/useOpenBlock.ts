@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { OpenBlockEditor, EditorConfig, Block } from '@openblock/core';
+import { OpenBlockEditor, EditorConfig, Block } from '@labbs/openblock-core';
 
 /**
  * Options for useOpenBlock hook

@@ -292,10 +292,16 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
   /**
    * Find block position from DOM element.
    * Uses a cached map to avoid repeated doc.descendants calls on mousemove.
+   * Returns null if the block is inside a table (to hide side menu in tables).
    */
   function findBlockPos(view: EditorView, target: HTMLElement): { pos: number; id: string } | null {
     const blockEl = target.closest('[data-block-id]') as HTMLElement | null;
     if (!blockEl) return null;
+
+    // Don't show side menu for blocks inside tables
+    if (blockEl.closest('table, .ob-table, [data-node-type="table"]')) {
+      return null;
+    }
 
     const blockId = blockEl.getAttribute('data-block-id');
     if (!blockId) return null;

@@ -21,7 +21,7 @@
  */
 
 import React, { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { OpenBlockEditor } from '@openblock/core';
+import { OpenBlockEditor } from '@labbs/openblock-core';
 
 /**
  * Props for OpenBlockView component

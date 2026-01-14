@@ -24,3 +24,8 @@ export { listItemNode } from './listItem';
 // Column nodes
 export { columnListNode } from './columnList';
 export { columnNode } from './column';
+
+// Table nodes
+export { tableNode } from './table';
+export { tableRowNode } from './tableRow';
+export { tableCellNode, tableHeaderNode } from './tableCell';

@@ -508,6 +508,93 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
     );
   }
 
+  // Tables
+  if (schema.nodes.table && schema.nodes.tableRow && schema.nodes.tableCell) {
+    items.push(
+      {
+        id: 'table',
+        title: 'Table',
+        description: 'Insert a table (3x3)',
+        icon: 'table',
+        keywords: ['grid', 'spreadsheet', 'rows', 'columns'],
+        group: 'Layout',
+        action: (view, _state) => {
+          const createRow = (colCount: number) => {
+            const cells = [];
+            for (let i = 0; i < colCount; i++) {
+              cells.push(
+                schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
+              );
+            }
+            return schema.nodes.tableRow.create(null, cells);
+          };
+
+          const rows = [];
+          for (let i = 0; i < 3; i++) {
+            rows.push(createRow(3));
+          }
+
+          const table = schema.nodes.table.create(null, rows);
+          view.dispatch(view.state.tr.replaceSelectionWith(table));
+        },
+      },
+      {
+        id: 'table2x2',
+        title: 'Table 2x2',
+        description: 'Insert a small table (2x2)',
+        icon: 'table',
+        keywords: ['grid', 'small', 'simple'],
+        group: 'Layout',
+        action: (view, _state) => {
+          const createRow = (colCount: number) => {
+            const cells = [];
+            for (let i = 0; i < colCount; i++) {
+              cells.push(
+                schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
+              );
+            }
+            return schema.nodes.tableRow.create(null, cells);
+          };
+
+          const rows = [];
+          for (let i = 0; i < 2; i++) {
+            rows.push(createRow(2));
+          }
+
+          const table = schema.nodes.table.create(null, rows);
+          view.dispatch(view.state.tr.replaceSelectionWith(table));
+        },
+      },
+      {
+        id: 'table4x4',
+        title: 'Table 4x4',
+        description: 'Insert a larger table (4x4)',
+        icon: 'table',
+        keywords: ['grid', 'large', 'big'],
+        group: 'Layout',
+        action: (view, _state) => {
+          const createRow = (colCount: number) => {
+            const cells = [];
+            for (let i = 0; i < colCount; i++) {
+              cells.push(
+                schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
+              );
+            }
+            return schema.nodes.tableRow.create(null, cells);
+          };
+
+          const rows = [];
+          for (let i = 0; i < 4; i++) {
+            rows.push(createRow(4));
+          }
+
+          const table = schema.nodes.table.create(null, rows);
+          view.dispatch(view.state.tr.replaceSelectionWith(table));
+        },
+      }
+    );
+  }
+
   return items;
 }
 

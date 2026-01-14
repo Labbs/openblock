@@ -12,7 +12,15 @@ import type { Block, InlineContent, TextStyles } from './types';
 /**
  * Container node types that have block children instead of inline content.
  */
-const CONTAINER_TYPES = new Set(['bulletList', 'orderedList', 'listItem']);
+const CONTAINER_TYPES = new Set([
+  'bulletList',
+  'orderedList',
+  'listItem',
+  'table',
+  'tableRow',
+  'tableCell',
+  'tableHeader',
+]);
 
 /**
  * Converts a ProseMirror node to a Block.
@@ -59,8 +67,14 @@ export function nodeToBlock(node: PMNode): Block {
           }
         });
       }
+    } else if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+      // Table cells: all block children become children
+      block.children = [];
+      node.forEach((child) => {
+        block.children!.push(nodeToBlock(child));
+      });
     } else {
-      // Lists: all children become block children
+      // Lists, tables, tableRows: all children become block children
       block.children = [];
       node.forEach((child) => {
         block.children!.push(nodeToBlock(child));

@@ -12,3 +12,9 @@ export type { LinkPopoverProps } from './LinkPopover';
 
 export { ColorPicker } from './ColorPicker';
 export type { ColorPickerProps } from './ColorPicker';
+
+export { TableMenu } from './TableMenu';
+export type { TableMenuProps } from './TableMenu';
+
+export { TableHandles } from './TableHandles';
+export type { TableHandlesProps } from './TableHandles';

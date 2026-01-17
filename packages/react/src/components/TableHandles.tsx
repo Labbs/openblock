@@ -36,9 +36,9 @@ import {
  */
 export interface TableHandlesProps {
   /**
-   * The OpenBlockEditor instance.
+   * The OpenBlockEditor instance (can be null during initialization).
    */
-  editor: OpenBlockEditor;
+  editor: OpenBlockEditor | null;
 
   /**
    * Additional class name for the handles container.
@@ -144,6 +144,8 @@ export function TableHandles({
 
   // Track mouse position to detect which row/col is hovered
   useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+
     let hideTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const clearHideTimeout = () => {
@@ -286,7 +288,7 @@ export function TableHandles({
 
   const handleAddRow = useCallback(
     (index: number) => {
-      if (!tableState) return;
+      if (!editor || editor.isDestroyed || !tableState) return;
       addRowAtIndex(editor.pm.state, editor.pm.view.dispatch, tableState.tablePos, index);
       editor.pm.view.focus();
       setShowRowMenu(null);
@@ -296,7 +298,7 @@ export function TableHandles({
 
   const handleDeleteRow = useCallback(
     (index: number) => {
-      if (!tableState) return;
+      if (!editor || editor.isDestroyed || !tableState) return;
       deleteRowAtIndex(editor.pm.state, editor.pm.view.dispatch, tableState.tablePos, index);
       editor.pm.view.focus();
       setShowRowMenu(null);
@@ -306,7 +308,7 @@ export function TableHandles({
 
   const handleAddCol = useCallback(
     (index: number) => {
-      if (!tableState) return;
+      if (!editor || editor.isDestroyed || !tableState) return;
       addColumnAtIndex(editor.pm.state, editor.pm.view.dispatch, tableState.tablePos, index);
       editor.pm.view.focus();
       setShowColMenu(null);
@@ -316,7 +318,7 @@ export function TableHandles({
 
   const handleDeleteCol = useCallback(
     (index: number) => {
-      if (!tableState) return;
+      if (!editor || editor.isDestroyed || !tableState) return;
       deleteColumnAtIndex(editor.pm.state, editor.pm.view.dispatch, tableState.tablePos, index);
       editor.pm.view.focus();
       setShowColMenu(null);
@@ -324,7 +326,7 @@ export function TableHandles({
     [editor, tableState]
   );
 
-  if (!tableState) return null;
+  if (!editor || editor.isDestroyed || !tableState) return null;
 
   const tableRect = tableState.tableElement.getBoundingClientRect();
 

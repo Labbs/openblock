@@ -19,7 +19,7 @@
  * ```
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { OpenBlockEditor, EditorConfig, Block } from '@labbs/openblock-core';
 
 /**
@@ -31,21 +31,25 @@ export interface UseOpenBlockOptions extends Omit<EditorConfig, 'element'> {}
  * Create and manage an OpenBlockEditor instance
  *
  * @param options - Editor configuration options
- * @returns The OpenBlockEditor instance
+ * @returns The OpenBlockEditor instance, or null during initialization
+ *
+ * @remarks
+ * This hook properly handles React 18+ StrictMode, which mounts components twice
+ * in development. The editor is created in useEffect to ensure a fresh instance
+ * is created after each mount/unmount cycle.
  */
-export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor {
-  // Use useState with lazy initializer to create the editor exactly once
-  // This is React 18+ safe and works with StrictMode
-  const [editor] = useState(() => new OpenBlockEditor(options));
+export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor | null {
+  const [editor, setEditor] = useState<OpenBlockEditor | null>(null);
+  const optionsRef = useRef(options);
 
-  // Cleanup on unmount only
   useEffect(() => {
+    const newEditor = new OpenBlockEditor(optionsRef.current);
+    setEditor(newEditor);
+
     return () => {
-      if (!editor.isDestroyed) {
-        editor.destroy();
-      }
+      newEditor.destroy();
     };
-  }, [editor]);
+  }, []);
 
   return editor;
 }

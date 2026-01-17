@@ -37,9 +37,9 @@ import {
  */
 export interface SlashMenuProps {
   /**
-   * The OpenBlockEditor instance.
+   * The OpenBlockEditor instance (can be null during initialization).
    */
-  editor: OpenBlockEditor;
+  editor: OpenBlockEditor | null;
 
   /**
    * Custom menu items (optional).
@@ -121,12 +121,14 @@ export function SlashMenu({
   const [openUpward, setOpenUpward] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Get menu items
-  const allItems = customItems ?? getDefaultSlashMenuItems(editor.pm.state.schema);
+  // Get menu items (only when editor is available)
+  const allItems = editor ? (customItems ?? getDefaultSlashMenuItems(editor.pm.state.schema)) : [];
   const filteredItems = menuState ? filterSlashMenuItems(allItems, menuState.query) : [];
 
   // Subscribe to plugin state changes
   useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+
     const updateState = () => {
       const state = SLASH_MENU_PLUGIN_KEY.getState(editor.pm.state);
       setMenuState(state ?? null);
@@ -143,7 +145,7 @@ export function SlashMenu({
 
   // Handle keyboard navigation
   useEffect(() => {
-    if (!menuState?.active) return;
+    if (!editor || editor.isDestroyed || !menuState?.active) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.key) {
@@ -175,7 +177,7 @@ export function SlashMenu({
   // Handle item selection
   const handleSelect = useCallback(
     (item: SlashMenuItem) => {
-      if (!menuState) return;
+      if (!editor || editor.isDestroyed || !menuState) return;
       executeSlashCommand(editor.pm.view, menuState, item.action);
       editor.pm.view.focus();
     },

@@ -20,26 +20,26 @@ export default function App() {
       <div className="container">
         <div className="editor-section">
           <div className="toolbar">
-            <button onClick={() => editor.toggleBold()} title="Bold (Cmd+B)">
+            <button onClick={() => editor?.toggleBold()} title="Bold (Cmd+B)" disabled={!editor}>
               <strong>B</strong>
             </button>
-            <button onClick={() => editor.toggleItalic()} title="Italic (Cmd+I)">
+            <button onClick={() => editor?.toggleItalic()} title="Italic (Cmd+I)" disabled={!editor}>
               <em>I</em>
             </button>
-            <button onClick={() => editor.toggleUnderline()} title="Underline (Cmd+U)">
+            <button onClick={() => editor?.toggleUnderline()} title="Underline (Cmd+U)" disabled={!editor}>
               <u>U</u>
             </button>
-            <button onClick={() => editor.toggleStrikethrough()} title="Strikethrough">
+            <button onClick={() => editor?.toggleStrikethrough()} title="Strikethrough" disabled={!editor}>
               <s>S</s>
             </button>
-            <button onClick={() => editor.toggleCode()} title="Code">
+            <button onClick={() => editor?.toggleCode()} title="Code" disabled={!editor}>
               {'</>'}
             </button>
             <span className="separator" />
-            <button onClick={() => console.log(editor.getDocument())} title="Log document to console">
+            <button onClick={() => editor && console.log(editor.getDocument())} title="Log document to console" disabled={!editor}>
               Log JSON
             </button>
-            <button onClick={() => console.log(editor.pm.state)} title="Log ProseMirror state">
+            <button onClick={() => editor && console.log(editor.pm.state)} title="Log ProseMirror state" disabled={!editor}>
               Log PM State
             </button>
           </div>

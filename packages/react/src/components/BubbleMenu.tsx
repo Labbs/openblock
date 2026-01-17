@@ -36,9 +36,9 @@ import { ColorPicker } from './ColorPicker';
  */
 export interface BubbleMenuProps {
   /**
-   * The OpenBlockEditor instance.
+   * The OpenBlockEditor instance (can be null during initialization).
    */
-  editor: OpenBlockEditor;
+  editor: OpenBlockEditor | null;
 
   /**
    * Custom render function for the menu content.
@@ -402,6 +402,8 @@ export function BubbleMenu({
   const linkButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+
     const updateState = () => {
       const state = BUBBLE_MENU_PLUGIN_KEY.getState(editor.pm.state);
       setMenuState(state ?? null);
@@ -421,26 +423,31 @@ export function BubbleMenu({
   }, [menuState?.visible]);
 
   const toggleBold = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     editor.toggleBold();
     editor.pm.view.focus();
   }, [editor]);
 
   const toggleItalic = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     editor.toggleItalic();
     editor.pm.view.focus();
   }, [editor]);
 
   const toggleUnderline = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     editor.toggleUnderline();
     editor.pm.view.focus();
   }, [editor]);
 
   const toggleStrikethrough = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     editor.toggleStrikethrough();
     editor.pm.view.focus();
   }, [editor]);
 
   const toggleCode = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     editor.toggleCode();
     editor.pm.view.focus();
   }, [editor]);
@@ -453,7 +460,7 @@ export function BubbleMenu({
     setShowLinkPopover(false);
   }, []);
 
-  if (!menuState?.visible || !menuState.coords) {
+  if (!editor || editor.isDestroyed || !menuState?.visible || !menuState.coords) {
     return null;
   }
 

@@ -39,9 +39,9 @@ import {
  */
 export interface TableMenuProps {
   /**
-   * The OpenBlockEditor instance.
+   * The OpenBlockEditor instance (can be null during initialization).
    */
-  editor: OpenBlockEditor;
+  editor: OpenBlockEditor | null;
 
   /**
    * Additional class name for the menu container.
@@ -207,6 +207,8 @@ export function TableMenu({
   const [coords, setCoords] = useState<{ left: number; top: number } | null>(null);
 
   useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+
     const updateState = () => {
       const state = editor.pm.state;
       const isInsideTable = isInTable(state);
@@ -247,41 +249,48 @@ export function TableMenu({
   }, [editor]);
 
   const handleAddRowBefore = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     addRowBefore(editor.pm.state, editor.pm.view.dispatch);
     editor.pm.view.focus();
   }, [editor]);
 
   const handleAddRowAfter = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     addRowAfter(editor.pm.state, editor.pm.view.dispatch);
     editor.pm.view.focus();
   }, [editor]);
 
   const handleDeleteRow = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     deleteRow(editor.pm.state, editor.pm.view.dispatch);
     editor.pm.view.focus();
   }, [editor]);
 
   const handleAddColumnBefore = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     addColumnBefore(editor.pm.state, editor.pm.view.dispatch);
     editor.pm.view.focus();
   }, [editor]);
 
   const handleAddColumnAfter = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     addColumnAfter(editor.pm.state, editor.pm.view.dispatch);
     editor.pm.view.focus();
   }, [editor]);
 
   const handleDeleteColumn = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     deleteColumn(editor.pm.state, editor.pm.view.dispatch);
     editor.pm.view.focus();
   }, [editor]);
 
   const handleDeleteTable = useCallback(() => {
+    if (!editor || editor.isDestroyed) return;
     deleteTable(editor.pm.state, editor.pm.view.dispatch);
     editor.pm.view.focus();
   }, [editor]);
 
-  if (!inTable || !coords) {
+  if (!editor || editor.isDestroyed || !inTable || !coords) {
     return null;
   }
 

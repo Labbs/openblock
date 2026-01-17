@@ -28,9 +28,9 @@ import { OpenBlockEditor } from '@labbs/openblock-core';
  */
 export interface OpenBlockViewProps {
   /**
-   * The OpenBlockEditor instance to render
+   * The OpenBlockEditor instance to render (can be null during initialization)
    */
-  editor: OpenBlockEditor;
+  editor: OpenBlockEditor | null;
 
   /**
    * Additional class name(s) for the container
@@ -58,9 +58,9 @@ export interface OpenBlockViewRef {
   container: HTMLDivElement | null;
 
   /**
-   * The OpenBlockEditor instance
+   * The OpenBlockEditor instance (can be null during initialization)
    */
-  editor: OpenBlockEditor;
+  editor: OpenBlockEditor | null;
 }
 
 /**

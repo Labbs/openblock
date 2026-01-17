@@ -210,3 +210,8 @@ export type {
   CommandFn,
 } from './types';
 
+// ===========================================================================
+// STYLES
+// ===========================================================================
+
+export { injectStyles, removeStyles, areStylesInjected } from './styles/injectStyles';

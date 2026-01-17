@@ -15,6 +15,7 @@ export {
   headingNode,
   textNode,
   blockquoteNode,
+  calloutNode,
   codeBlockNode,
   dividerNode,
   bulletListNode,
@@ -27,7 +28,7 @@ export {
   tableCellNode,
   tableHeaderNode,
 } from './nodes';
-export type { TextAlignment } from './nodes';
+export type { TextAlignment, CalloutType } from './nodes';
 
 // Re-export individual mark specs for extension authors
 export {

@@ -13,6 +13,8 @@ export { textNode } from './text';
 
 // Block nodes
 export { blockquoteNode } from './blockquote';
+export { calloutNode } from './callout';
+export type { CalloutType } from './callout';
 export { codeBlockNode } from './codeBlock';
 export { dividerNode } from './divider';
 

@@ -252,6 +252,48 @@
 }
 
 /* ===========================================================================
+ * Callout
+ * =========================================================================== */
+
+.openblock-editor .openblock-callout {
+  margin: 0;
+  padding: 0.75em 1em;
+  border-radius: var(--ob-radius);
+  border-left: 4px solid;
+  background: hsl(var(--ob-muted) / 0.5);
+}
+
+/* Info callout (default) */
+.openblock-editor .openblock-callout--info {
+  border-left-color: hsl(220 90% 56%);
+  background: hsl(220 90% 56% / 0.1);
+}
+
+/* Warning callout */
+.openblock-editor .openblock-callout--warning {
+  border-left-color: hsl(38 92% 50%);
+  background: hsl(38 92% 50% / 0.1);
+}
+
+/* Success callout */
+.openblock-editor .openblock-callout--success {
+  border-left-color: hsl(142 76% 36%);
+  background: hsl(142 76% 36% / 0.1);
+}
+
+/* Error callout */
+.openblock-editor .openblock-callout--error {
+  border-left-color: hsl(0 84% 60%);
+  background: hsl(0 84% 60% / 0.1);
+}
+
+/* Note callout */
+.openblock-editor .openblock-callout--note {
+  border-left-color: hsl(var(--ob-muted-foreground));
+  background: hsl(var(--ob-muted) / 0.5);
+}
+
+/* ===========================================================================
  * Code Block
  * =========================================================================== */
 
@@ -408,6 +450,7 @@
 .openblock-editor h5,
 .openblock-editor h6,
 .openblock-editor blockquote,
+.openblock-editor .openblock-callout,
 .openblock-editor pre,
 .openblock-editor ul,
 .openblock-editor ol,

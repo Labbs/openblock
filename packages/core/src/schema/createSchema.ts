@@ -14,6 +14,7 @@ import {
   headingNode,
   textNode,
   blockquoteNode,
+  calloutNode,
   codeBlockNode,
   dividerNode,
   bulletListNode,
@@ -40,7 +41,7 @@ import {
 /**
  * Default node specifications.
  *
- * Includes: doc, paragraph, heading, text, blockquote, codeBlock, divider, lists, columns
+ * Includes: doc, paragraph, heading, text, blockquote, callout, codeBlock, divider, lists, columns
  */
 export const DEFAULT_NODES = {
   doc: docNode,
@@ -48,6 +49,7 @@ export const DEFAULT_NODES = {
   heading: headingNode,
   text: textNode,
   blockquote: blockquoteNode,
+  callout: calloutNode,
   codeBlock: codeBlockNode,
   divider: dividerNode,
   bulletList: bulletListNode,

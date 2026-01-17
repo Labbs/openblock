@@ -106,6 +106,42 @@ export const sampleDocument: Block[] = [
     ],
   },
   {
+    id: 'callout-info',
+    type: 'callout',
+    props: { calloutType: 'info' },
+    content: [
+      { type: 'text', text: 'Info: ', styles: { bold: true } },
+      { type: 'text', text: 'This is an info callout for important information.', styles: {} },
+    ],
+  },
+  {
+    id: 'callout-warning',
+    type: 'callout',
+    props: { calloutType: 'warning' },
+    content: [
+      { type: 'text', text: 'Warning: ', styles: { bold: true } },
+      { type: 'text', text: 'This is a warning callout for cautions.', styles: {} },
+    ],
+  },
+  {
+    id: 'callout-success',
+    type: 'callout',
+    props: { calloutType: 'success' },
+    content: [
+      { type: 'text', text: 'Success: ', styles: { bold: true } },
+      { type: 'text', text: 'This is a success callout for tips and completed tasks.', styles: {} },
+    ],
+  },
+  {
+    id: 'callout-error',
+    type: 'callout',
+    props: { calloutType: 'error' },
+    content: [
+      { type: 'text', text: 'Error: ', styles: { bold: true } },
+      { type: 'text', text: 'This is an error callout for critical information.', styles: {} },
+    ],
+  },
+  {
     id: 'para-code-intro',
     type: 'paragraph',
     props: {},

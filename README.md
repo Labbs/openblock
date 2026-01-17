@@ -60,7 +60,7 @@ npm install @labbs/openblock-core @labbs/openblock-react
 
 ```tsx
 import { useOpenBlock, OpenBlockView, SlashMenu, BubbleMenu, TableHandles } from '@labbs/openblock-react';
-import '@labbs/openblock-core/styles/editor.css';
+// CSS is auto-injected by default - no import needed!
 
 function Editor() {
   const editor = useOpenBlock({
@@ -89,7 +89,7 @@ function Editor() {
 
 ```typescript
 import { OpenBlockEditor } from '@labbs/openblock-core';
-import '@labbs/openblock-core/styles/editor.css';
+// CSS is auto-injected by default - no import needed!
 
 const editor = new OpenBlockEditor({
   initialContent: [/* blocks */],
@@ -97,6 +97,8 @@ const editor = new OpenBlockEditor({
 
 editor.mount(document.getElementById('editor'));
 ```
+
+> **Note:** CSS styles are automatically injected into the document head. To disable auto-injection and provide your own styles, set `injectStyles: false` in the editor config.
 
 ## API
 
@@ -254,6 +256,16 @@ When hovering over a table:
 - **Row handles** appear on the left — click to insert/delete rows
 - **Column handles** appear on top — click to insert/delete columns
 - **Extend buttons** appear on the right and bottom — click to add rows/columns
+
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [React Integration](docs/react-integration.md) | Hooks, components, and patterns for React |
+| [Custom Blocks](docs/custom-blocks.md) | Creating your own block types |
+| [Custom Marks](docs/custom-marks.md) | Creating inline formatting marks |
+| [Plugins](docs/plugins.md) | Building ProseMirror plugins |
+| [Styling](docs/styling.md) | CSS customization and theming |
 
 ## Packages
 

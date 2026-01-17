@@ -24,7 +24,27 @@ jobs:
           registry-url: 'https://npm.pkg.github.com'
           scope: '@labbs'
 
-      - run: pnpm install
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Remove 'v' prefix from tag (v1.0.0-beta2 -> 1.0.0-beta2)
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing version: $VERSION"
+
+      - name: Update package versions
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          # Update core package version
+          cd packages/core
+          npm pkg set version="$VERSION"
+          cd ../react
+          # Update react package version
+          npm pkg set version="$VERSION"
+          # Update dependency on core to use exact version
+          npm pkg set dependencies.@labbs/openblock-core="$VERSION"
+
+      - run: pnpm install --no-frozen-lockfile
 
       - name: Build packages
         run: |

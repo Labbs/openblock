@@ -1,6 +1,7 @@
 import { useOpenBlock, OpenBlockView, useEditorContent, SlashMenu, BubbleMenu, TableHandles } from '@labbs/openblock-react';
 import { sampleDocument } from './data';
-import '@labbs/openblock-core/styles/editor.css';
+// CSS is now auto-injected by the editor - no need to import!
+// import '@labbs/openblock-core/styles/editor.css';
 import './styles.css';
 
 export default function App() {

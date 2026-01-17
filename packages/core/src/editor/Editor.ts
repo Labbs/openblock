@@ -31,6 +31,7 @@ import { ProseMirrorAPI } from '../pm/ProseMirrorAPI';
 import { EditorConfig, defaultConfig, EditorEvents, EventHandler } from './EditorConfig';
 import { createSchema } from '../schema';
 import { createPlugins } from '../plugins';
+import { injectStyles } from '../styles/injectStyles';
 import {
   Block,
   PartialBlock,
@@ -75,6 +76,11 @@ export class OpenBlockEditor {
   constructor(config: EditorConfig = {}) {
     this._config = { ...defaultConfig, ...config };
     this.pm = new ProseMirrorAPI(this);
+
+    // Auto-inject styles unless explicitly disabled
+    if (this._config.injectStyles !== false) {
+      injectStyles();
+    }
 
     this._schema = createSchema();
     this._createEditor();

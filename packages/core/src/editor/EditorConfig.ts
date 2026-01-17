@@ -132,6 +132,13 @@ export interface EditorConfig {
   };
 
   /**
+   * Whether to automatically inject editor styles into the document.
+   * Set to false if you want to provide your own CSS or import the stylesheet manually.
+   * @default true
+   */
+  injectStyles?: boolean;
+
+  /**
    * Event callbacks.
    */
   onUpdate?: (blocks: Block[]) => void;
@@ -146,4 +153,5 @@ export interface EditorConfig {
 export const defaultConfig: Partial<EditorConfig> = {
   editable: true,
   autoFocus: false,
+  injectStyles: true,
 };

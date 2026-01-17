@@ -107,6 +107,19 @@ export interface EditorConfig {
   inputRules?: InputRulesConfig | false;
 
   /**
+   * Whether to auto-inject CSS styles into the document head.
+   *
+   * When true (default), OpenBlock will automatically inject all required
+   * CSS styles, so you don't need to import any CSS files manually.
+   *
+   * Set to false if you want to provide your own styles or import the
+   * CSS file manually.
+   *
+   * @default true
+   */
+  injectStyles?: boolean;
+
+  /**
    * Direct ProseMirror configuration.
    * Use this for advanced customization.
    * ALL PROSEMIRROR OPTIONS ARE PUBLIC - this is OpenBlock's philosophy.

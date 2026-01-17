@@ -77,7 +77,7 @@ export class OpenBlockEditor {
     this._config = { ...defaultConfig, ...config };
     this.pm = new ProseMirrorAPI(this);
 
-    // Auto-inject styles if enabled (default: true)
+    // Auto-inject styles unless explicitly disabled
     if (this._config.injectStyles !== false) {
       injectStyles();
     }

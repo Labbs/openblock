@@ -75,6 +75,7 @@ export {
   headingNode,
   textNode,
   blockquoteNode,
+  calloutNode,
   codeBlockNode,
   dividerNode,
   bulletListNode,
@@ -87,6 +88,7 @@ export {
   tableCellNode,
   tableHeaderNode,
 } from './schema';
+export type { CalloutType } from './schema';
 
 // Mark specs
 export {

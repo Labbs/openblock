@@ -401,6 +401,60 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
     });
   }
 
+  // Callout
+  if (schema.nodes.callout) {
+    items.push(
+      {
+        id: 'calloutInfo',
+        title: 'Callout',
+        description: 'Highlight important information',
+        icon: 'info',
+        keywords: ['callout', 'alert', 'note', 'info', 'highlight'],
+        group: 'Basic blocks',
+        action: (view, _state) => {
+          const node = schema.nodes.callout.create({ calloutType: 'info' });
+          view.dispatch(view.state.tr.replaceSelectionWith(node));
+        },
+      },
+      {
+        id: 'calloutWarning',
+        title: 'Warning',
+        description: 'Show a warning message',
+        icon: 'alertTriangle',
+        keywords: ['callout', 'alert', 'warning', 'caution'],
+        group: 'Basic blocks',
+        action: (view, _state) => {
+          const node = schema.nodes.callout.create({ calloutType: 'warning' });
+          view.dispatch(view.state.tr.replaceSelectionWith(node));
+        },
+      },
+      {
+        id: 'calloutSuccess',
+        title: 'Success',
+        description: 'Show a success message',
+        icon: 'checkCircle',
+        keywords: ['callout', 'success', 'done', 'tip'],
+        group: 'Basic blocks',
+        action: (view, _state) => {
+          const node = schema.nodes.callout.create({ calloutType: 'success' });
+          view.dispatch(view.state.tr.replaceSelectionWith(node));
+        },
+      },
+      {
+        id: 'calloutError',
+        title: 'Error',
+        description: 'Show an error message',
+        icon: 'xCircle',
+        keywords: ['callout', 'error', 'danger', 'important'],
+        group: 'Basic blocks',
+        action: (view, _state) => {
+          const node = schema.nodes.callout.create({ calloutType: 'error' });
+          view.dispatch(view.state.tr.replaceSelectionWith(node));
+        },
+      }
+    );
+  }
+
   // Code block
   if (schema.nodes.codeBlock) {
     items.push({

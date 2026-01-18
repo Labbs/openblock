@@ -30,7 +30,7 @@ import { v4 as uuid } from 'uuid';
 import { ProseMirrorAPI } from '../pm/ProseMirrorAPI';
 import { EditorConfig, defaultConfig, EditorEvents, EventHandler } from './EditorConfig';
 import { createSchema } from '../schema';
-import { createPlugins } from '../plugins';
+import { createPlugins, undo, redo } from '../plugins';
 import { injectStyles } from '../styles/injectStyles';
 import {
   Block,
@@ -312,6 +312,38 @@ export class OpenBlockEditor {
     // Delete in reverse order to preserve positions during iteration
     toDelete.reverse().forEach(({ from, to }) => tr.delete(from, to));
     this.pm.dispatch(tr);
+  }
+
+  // ===========================================================================
+  // HISTORY (UNDO/REDO)
+  // ===========================================================================
+
+  /**
+   * Undo the last change.
+   *
+   * @returns True if undo was performed, false if nothing to undo
+   *
+   * @example
+   * ```typescript
+   * editor.undo();
+   * ```
+   */
+  undo(): boolean {
+    return undo(this._pmView.state, this._pmView.dispatch);
+  }
+
+  /**
+   * Redo the last undone change.
+   *
+   * @returns True if redo was performed, false if nothing to redo
+   *
+   * @example
+   * ```typescript
+   * editor.redo();
+   * ```
+   */
+  redo(): boolean {
+    return redo(this._pmView.state, this._pmView.dispatch);
   }
 
   // ===========================================================================

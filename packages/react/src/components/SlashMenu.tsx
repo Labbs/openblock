@@ -43,9 +43,21 @@ export interface SlashMenuProps {
 
   /**
    * Custom menu items (optional).
-   * If not provided, uses default items based on schema.
+   * If provided, replaces all default items.
    */
   items?: SlashMenuItem[];
+
+  /**
+   * Additional menu items to append to the default items.
+   * Use this to add custom block types to the slash menu.
+   *
+   * @example
+   * ```tsx
+   * const customItems = useCustomSlashMenuItems(editor, [DatabaseBlock]);
+   * return <SlashMenu editor={editor} additionalItems={customItems} />;
+   * ```
+   */
+  additionalItems?: SlashMenuItem[];
 
   /**
    * Custom render function for menu items.
@@ -113,6 +125,7 @@ const Icons: Record<string, React.FC<{ className?: string }>> = {
 export function SlashMenu({
   editor,
   items: customItems,
+  additionalItems,
   renderItem,
   className,
 }: SlashMenuProps): React.ReactElement | null {
@@ -122,7 +135,9 @@ export function SlashMenu({
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Get menu items (only when editor is available)
-  const allItems = editor ? (customItems ?? getDefaultSlashMenuItems(editor.pm.state.schema)) : [];
+  // If customItems provided, use those; otherwise use defaults + additionalItems
+  const baseItems = editor ? (customItems ?? getDefaultSlashMenuItems(editor.pm.state.schema)) : [];
+  const allItems = customItems ? baseItems : [...baseItems, ...(additionalItems || [])];
   const filteredItems = menuState ? filterSlashMenuItems(allItems, menuState.query) : [];
 
   // Subscribe to plugin state changes

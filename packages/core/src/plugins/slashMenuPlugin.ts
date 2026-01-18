@@ -649,6 +649,69 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
     );
   }
 
+  // Image
+  if (schema.nodes.image) {
+    items.push({
+      id: 'image',
+      title: 'Image',
+      description: 'Insert an image',
+      icon: 'image',
+      keywords: ['img', 'picture', 'photo', 'media'],
+      group: 'Media',
+      action: (view) => {
+        const node = schema.nodes.image.create({ src: '', alt: '' });
+        view.dispatch(view.state.tr.replaceSelectionWith(node));
+      },
+    });
+  }
+
+  // Checklist / Todo
+  if (schema.nodes.checkList && schema.nodes.checkListItem) {
+    items.push({
+      id: 'checklist',
+      title: 'To-do list',
+      description: 'Track tasks with checkboxes',
+      icon: 'checkSquare',
+      keywords: ['todo', 'task', 'checkbox', 'check', 'list'],
+      group: 'Lists',
+      action: (view) => {
+        const item = schema.nodes.checkListItem.create({ checked: false });
+        const list = schema.nodes.checkList.create(null, [item]);
+        view.dispatch(view.state.tr.replaceSelectionWith(list));
+      },
+    });
+  }
+
+  // Embed
+  if (schema.nodes.embed) {
+    items.push(
+      {
+        id: 'embed',
+        title: 'Embed',
+        description: 'Embed external content (YouTube, etc.)',
+        icon: 'embed',
+        keywords: ['video', 'youtube', 'vimeo', 'iframe', 'external'],
+        group: 'Media',
+        action: (view) => {
+          const node = schema.nodes.embed.create({ url: '', provider: 'generic' });
+          view.dispatch(view.state.tr.replaceSelectionWith(node));
+        },
+      },
+      {
+        id: 'youtube',
+        title: 'YouTube',
+        description: 'Embed a YouTube video',
+        icon: 'youtube',
+        keywords: ['video', 'embed', 'media'],
+        group: 'Media',
+        action: (view) => {
+          const node = schema.nodes.embed.create({ url: '', provider: 'youtube' });
+          view.dispatch(view.state.tr.replaceSelectionWith(node));
+        },
+      }
+    );
+  }
+
   return items;
 }
 

@@ -87,8 +87,13 @@ export {
   tableRowNode,
   tableCellNode,
   tableHeaderNode,
+  imageNode,
+  checkListNode,
+  checkListItemNode,
+  embedNode,
+  parseEmbedUrl,
 } from './schema';
-export type { CalloutType } from './schema';
+export type { CalloutType, ImageAlignment, EmbedProvider } from './schema';
 
 // Mark specs
 export {
@@ -195,6 +200,32 @@ export type { BubbleMenuConfig, BubbleMenuState, BlockTypeInfo, TextAlign } from
 // Table plugin
 export { createTablePlugin, TABLE_PLUGIN_KEY } from './plugins';
 export type { TablePluginConfig } from './plugins';
+
+// Keyboard shortcuts
+export { createKeyboardShortcutsPlugin, DEFAULT_KEYBOARD_SHORTCUTS } from './plugins';
+export type { KeyboardShortcutsConfig, KeyboardShortcut } from './plugins';
+
+// Checklist plugin
+export { createChecklistPlugin } from './plugins';
+export type { ChecklistPluginConfig } from './plugins';
+
+// Media menu plugin
+export {
+  createMediaMenuPlugin,
+  MEDIA_MENU_PLUGIN_KEY,
+  hideMediaMenu,
+  updateMediaAttrs,
+  deleteMediaNode,
+} from './plugins';
+export type {
+  MediaMenuState,
+  MediaType,
+  ImageAttrs,
+  EmbedAttrs,
+} from './plugins';
+
+// History (undo/redo)
+export { undo, redo } from './plugins';
 
 // ===========================================================================
 // TYPES (additional schema/extension types)

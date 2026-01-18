@@ -13,6 +13,7 @@ import {
   paragraphNode,
   headingNode,
   textNode,
+  hardBreakNode,
   blockquoteNode,
   calloutNode,
   codeBlockNode,
@@ -26,6 +27,10 @@ import {
   tableRowNode,
   tableCellNode,
   tableHeaderNode,
+  imageNode,
+  checkListNode,
+  checkListItemNode,
+  embedNode,
 } from './nodes';
 import {
   boldMark,
@@ -48,6 +53,7 @@ export const DEFAULT_NODES = {
   paragraph: paragraphNode,
   heading: headingNode,
   text: textNode,
+  hardBreak: hardBreakNode,
   blockquote: blockquoteNode,
   callout: calloutNode,
   codeBlock: codeBlockNode,
@@ -61,6 +67,10 @@ export const DEFAULT_NODES = {
   tableRow: tableRowNode,
   tableCell: tableCellNode,
   tableHeader: tableHeaderNode,
+  image: imageNode,
+  checkList: checkListNode,
+  checkListItem: checkListItemNode,
+  embed: embedNode,
 };
 
 /**

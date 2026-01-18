@@ -4,24 +4,74 @@
  * Provides a unified dropdown with both text and background color options,
  * similar to Notion's color picker design.
  *
+ * ## Basic Usage
+ *
+ * @example
+ * ```tsx
+ * <ColorPicker
+ *   editor={editor}
+ *   currentTextColor={state.activeMarks.textColor}
+ *   currentBackgroundColor={state.activeMarks.backgroundColor}
+ * />
+ * ```
+ *
+ * ## Custom Color Palettes
+ *
+ * You can customize the available colors using `textColors` and `backgroundColors` props.
+ *
+ * @example Custom brand colors
+ * ```tsx
+ * const brandTextColors: ColorOption[] = [
+ *   { value: '', label: 'Default' },
+ *   { value: '#1a1a1a', label: 'Black' },
+ *   { value: '#0066cc', label: 'Brand Blue' },
+ *   { value: '#00994d', label: 'Brand Green' },
+ * ];
+ *
+ * const brandBackgroundColors: ColorOption[] = [
+ *   { value: '', label: 'Default' },
+ *   { value: '#f0f7ff', label: 'Light Blue' },
+ *   { value: '#f0fff5', label: 'Light Green' },
+ * ];
+ *
+ * <ColorPicker
+ *   editor={editor}
+ *   currentTextColor={textColor}
+ *   currentBackgroundColor={bgColor}
+ *   textColors={brandTextColors}
+ *   backgroundColors={brandBackgroundColors}
+ * />
+ * ```
+ *
  * @module
  */
 
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { OpenBlockEditor } from '@labbs/openblock-core';
 
+// ============================================================================
+// Types
+// ============================================================================
+
 /**
  * Color option definition.
  */
-interface ColorOption {
+export interface ColorOption {
+  /** CSS color value (empty string for "Default"/remove color) */
   value: string;
+  /** Display label for the color */
   label: string;
 }
 
+// ============================================================================
+// Default Color Palettes
+// ============================================================================
+
 /**
- * Predefined text colors.
+ * Default text colors palette.
+ * Use this as a base when creating custom palettes.
  */
-const TEXT_COLORS: ColorOption[] = [
+export const DEFAULT_TEXT_COLORS: ColorOption[] = [
   { value: '', label: 'Default' },
   { value: '#374151', label: 'Gray' },
   { value: '#dc2626', label: 'Red' },
@@ -34,9 +84,10 @@ const TEXT_COLORS: ColorOption[] = [
 ];
 
 /**
- * Predefined background colors.
+ * Default background colors palette.
+ * Use this as a base when creating custom palettes.
  */
-const BACKGROUND_COLORS: ColorOption[] = [
+export const DEFAULT_BACKGROUND_COLORS: ColorOption[] = [
   { value: '', label: 'Default' },
   { value: '#f3f4f6', label: 'Gray' },
   { value: '#fee2e2', label: 'Red' },
@@ -47,6 +98,10 @@ const BACKGROUND_COLORS: ColorOption[] = [
   { value: '#ede9fe', label: 'Purple' },
   { value: '#fce7f3', label: 'Pink' },
 ];
+
+// ============================================================================
+// Component
+// ============================================================================
 
 /**
  * Props for ColorPicker component.
@@ -68,6 +123,30 @@ export interface ColorPickerProps {
   currentBackgroundColor: string | null;
 
   /**
+   * Custom text color palette.
+   * If not provided, uses DEFAULT_TEXT_COLORS.
+   */
+  textColors?: ColorOption[];
+
+  /**
+   * Custom background color palette.
+   * If not provided, uses DEFAULT_BACKGROUND_COLORS.
+   */
+  backgroundColors?: ColorOption[];
+
+  /**
+   * Label for the text color section.
+   * @default "Color"
+   */
+  textColorLabel?: string;
+
+  /**
+   * Label for the background color section.
+   * @default "Background"
+   */
+  backgroundColorLabel?: string;
+
+  /**
    * Callback when color picker closes.
    */
   onClose?: () => void;
@@ -82,6 +161,10 @@ export function ColorPicker({
   editor,
   currentTextColor,
   currentBackgroundColor,
+  textColors = DEFAULT_TEXT_COLORS,
+  backgroundColors = DEFAULT_BACKGROUND_COLORS,
+  textColorLabel = 'Color',
+  backgroundColorLabel = 'Background',
   onClose,
 }: ColorPickerProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
@@ -195,9 +278,9 @@ export function ColorPicker({
         >
           {/* Text color section */}
           <div className="ob-color-picker-section">
-            <div className="ob-color-picker-label">Color</div>
+            <div className="ob-color-picker-label">{textColorLabel}</div>
             <div className="ob-color-picker-grid">
-              {TEXT_COLORS.map((color) => {
+              {textColors.map((color) => {
                 const isActive = color.value === '' ? !currentTextColor : currentTextColor === color.value;
                 return (
                   <button
@@ -231,9 +314,9 @@ export function ColorPicker({
 
           {/* Background color section */}
           <div className="ob-color-picker-section">
-            <div className="ob-color-picker-label">Background</div>
+            <div className="ob-color-picker-label">{backgroundColorLabel}</div>
             <div className="ob-color-picker-grid">
-              {BACKGROUND_COLORS.map((color) => {
+              {backgroundColors.map((color) => {
                 const isActive = color.value === '' ? !currentBackgroundColor : currentBackgroundColor === color.value;
                 return (
                   <button

@@ -198,14 +198,35 @@ function shouldShowMenu(
   // Check selection length
   if (to - from < minSelectionLength) return false;
 
-  // Check if it's a node selection
-  if (selection.constructor.name === 'NodeSelection' && !showOnNodeSelection) {
-    return false;
+  // Check if it's a node selection (image, embed, etc.)
+  if (selection.constructor.name === 'NodeSelection') {
+    if (!showOnNodeSelection) {
+      return false;
+    }
+    // Even if showOnNodeSelection is true, exclude media nodes (they have their own menu)
+    const node = (selection as { node?: { type?: { name?: string } } }).node;
+    if (node?.type?.name === 'image' || node?.type?.name === 'embed') {
+      return false;
+    }
   }
 
   // Don't show in code blocks
   const $from = selection.$from;
   if ($from.parent.type.name === 'codeBlock') {
+    return false;
+  }
+
+  // Don't show when cursor is inside an image or embed node
+  // (in case of text selection that includes media)
+  let hasMediaNode = false;
+  state.doc.nodesBetween(from, to, (node) => {
+    if (node.type.name === 'image' || node.type.name === 'embed') {
+      hasMediaNode = true;
+      return false; // Stop iteration
+    }
+    return true;
+  });
+  if (hasMediaNode) {
     return false;
   }
 

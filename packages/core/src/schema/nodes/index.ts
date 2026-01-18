@@ -10,6 +10,7 @@ export { paragraphNode } from './paragraph';
 export type { TextAlignment } from './paragraph';
 export { headingNode } from './heading';
 export { textNode } from './text';
+export { hardBreakNode } from './hardBreak';
 
 // Block nodes
 export { blockquoteNode } from './blockquote';
@@ -32,3 +33,13 @@ export { tableNode } from './table';
 export { tableRowNode } from './tableRow';
 export { tableCellNode, tableHeaderNode } from './tableCell';
 
+// Media nodes
+export { imageNode } from './image';
+export type { ImageAlignment } from './image';
+
+// Embed nodes
+export { embedNode, parseEmbedUrl } from './embed';
+export type { EmbedProvider } from './embed';
+
+// Check list nodes
+export { checkListNode, checkListItemNode } from './checkList';

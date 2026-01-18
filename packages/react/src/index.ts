@@ -34,8 +34,34 @@ export {
 export type { UseOpenBlockOptions } from './hooks';
 
 // Components
-export { OpenBlockView, SlashMenu, BubbleMenu, TableMenu, TableHandles } from './components';
-export type { OpenBlockViewProps, OpenBlockViewRef, SlashMenuProps, BubbleMenuProps, TableMenuProps, TableHandlesProps } from './components';
+export {
+  OpenBlockView,
+  SlashMenu,
+  BubbleMenu,
+  TableMenu,
+  TableHandles,
+  MediaMenu,
+  ColorPicker,
+  // BubbleMenu constants
+  BUBBLE_MENU_ITEMS,
+  DEFAULT_BUBBLE_MENU_ORDER,
+  // ColorPicker constants
+  DEFAULT_TEXT_COLORS,
+  DEFAULT_BACKGROUND_COLORS,
+} from './components';
+export type {
+  OpenBlockViewProps,
+  OpenBlockViewRef,
+  SlashMenuProps,
+  SlashMenuItem,
+  BubbleMenuProps,
+  BubbleMenuItem,
+  TableMenuProps,
+  TableHandlesProps,
+  MediaMenuProps,
+  ColorPickerProps,
+  ColorOption,
+} from './components';
 
 // Custom blocks
 export {

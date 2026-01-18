@@ -237,6 +237,10 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
       // Check if block is inside a column
       const columnEl = blockEl.closest('.ob-column') as HTMLElement | null;
 
+      // Check if block is inside a list (nested content)
+      const listEl = blockEl.closest('ul, ol') as HTMLElement | null;
+      const isNestedInList = listEl && !listEl.classList.contains('openblock-checklist');
+
       // Position the menu to the LEFT of the block's text content
       // The side menu is ~40px wide (18px add button + 1px gap + 18px drag handle + some padding)
       const menuWidth = 40;
@@ -246,6 +250,10 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
         // The column should have left padding (48px) reserved for the menu
         const columnRect = columnEl.getBoundingClientRect();
         left = columnRect.left - editorRect.left + 4; // 4px from column's left edge
+      } else if (isNestedInList) {
+        // For blocks inside lists, position at the editor's left margin
+        // Lists have padding-left which shifts content, so we position at the fixed left margin
+        left = 8;
       } else {
         // For top-level blocks, position to the left of the block
         left = blockRect.left - editorRect.left - menuWidth - 4; // 4px gap between menu and text

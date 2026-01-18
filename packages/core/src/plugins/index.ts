@@ -4,9 +4,15 @@
  * @module
  */
 
+// Re-export history functions for programmatic undo/redo
+export { undo, redo } from 'prosemirror-history';
+
 export { createBlockIdPlugin, BLOCK_ID_PLUGIN_KEY } from './blockIdPlugin';
 export { createPlugins } from './createPlugins';
 export type { CreatePluginsOptions } from './createPlugins';
+
+export { createKeyboardShortcutsPlugin, DEFAULT_KEYBOARD_SHORTCUTS } from './keyboardShortcutsPlugin';
+export type { KeyboardShortcutsConfig, KeyboardShortcut } from './keyboardShortcutsPlugin';
 
 export {
   createInputRulesPlugin,
@@ -63,4 +69,21 @@ export type { MultiBlockSelectionConfig, MultiBlockSelectionState } from './mult
 
 export { createTablePlugin, TABLE_PLUGIN_KEY } from './tablePlugin';
 export type { TablePluginConfig } from './tablePlugin';
+
+export { createChecklistPlugin } from './checklistPlugin';
+export type { ChecklistPluginConfig } from './checklistPlugin';
+
+export {
+  createMediaMenuPlugin,
+  MEDIA_MENU_PLUGIN_KEY,
+  hideMediaMenu,
+  updateMediaAttrs,
+  deleteMediaNode,
+} from './mediaMenuPlugin';
+export type {
+  MediaMenuState,
+  MediaType,
+  ImageAttrs,
+  EmbedAttrs,
+} from './mediaMenuPlugin';
 

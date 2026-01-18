@@ -27,8 +27,13 @@ export {
   tableRowNode,
   tableCellNode,
   tableHeaderNode,
+  imageNode,
+  checkListNode,
+  checkListItemNode,
+  embedNode,
+  parseEmbedUrl,
 } from './nodes';
-export type { TextAlignment, CalloutType } from './nodes';
+export type { TextAlignment, CalloutType, ImageAlignment, EmbedProvider } from './nodes';
 
 // Re-export individual mark specs for extension authors
 export {

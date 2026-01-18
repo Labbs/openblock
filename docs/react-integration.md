@@ -398,6 +398,116 @@ export default function EditorInner({ initialContent }) {
 }
 ```
 
+## Component Customization
+
+### BubbleMenu Customization
+
+The BubbleMenu supports extensive customization for adding, reordering, or hiding items.
+
+```tsx
+import { BubbleMenu, BubbleMenuItem, BUBBLE_MENU_ITEMS } from '@labbs/openblock-react';
+
+// Create a custom button
+const translateButton: BubbleMenuItem = {
+  id: 'translate',
+  label: 'Translate',
+  icon: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10" />
+    </svg>
+  ),
+  action: async (editor, state) => {
+    const text = editor.pm.state.doc.textBetween(state.from, state.to);
+    // Handle translation...
+  },
+};
+
+// Use with customization props
+<BubbleMenu
+  editor={editor}
+  customItems={[translateButton]}
+  itemOrder={[
+    'bold', 'italic', 'underline',
+    '---',  // Divider
+    'translate',
+    '---',
+    'link', 'color',
+  ]}
+  hideItems={['strikethrough', 'code']}
+/>
+```
+
+**Available default item IDs:**
+- Block type: `blockType`
+- Alignment: `alignLeft`, `alignCenter`, `alignRight`
+- Formatting: `bold`, `italic`, `underline`, `strikethrough`
+- Style: `code`, `link`, `color`
+
+### SlashMenu Customization
+
+The SlashMenu supports similar customization patterns.
+
+```tsx
+import { SlashMenu, SlashMenuItem } from '@labbs/openblock-react';
+
+const customItems: SlashMenuItem[] = [
+  {
+    id: 'emoji',
+    title: 'Emoji',
+    description: 'Insert an emoji',
+    icon: '😀',
+    action: (editor) => {
+      // Show emoji picker...
+    },
+  },
+];
+
+<SlashMenu
+  editor={editor}
+  customItems={customItems}
+  hideItems={['table', 'video']}
+  itemOrder={['paragraph', 'heading', 'bulletList', 'emoji']}
+/>
+```
+
+**Available default item IDs:**
+- Text: `paragraph`, `heading`
+- Lists: `bulletList`, `numberedList`, `checkList`
+- Blocks: `blockquote`, `codeBlock`, `callout`, `divider`
+- Tables: `table`
+- Media: `image`, `video`, `audio`, `file`
+
+### ColorPicker Customization
+
+Customize the color palettes for text and background colors.
+
+```tsx
+import { ColorPicker, ColorOption, DEFAULT_TEXT_COLORS } from '@labbs/openblock-react';
+
+const brandTextColors: ColorOption[] = [
+  { value: '', label: 'Default' },
+  { value: '#0066cc', label: 'Brand Blue' },
+  { value: '#00994d', label: 'Brand Green' },
+  { value: '#cc3300', label: 'Brand Red' },
+];
+
+const brandBackgroundColors: ColorOption[] = [
+  { value: '', label: 'None' },
+  { value: '#e6f2ff', label: 'Blue Highlight' },
+  { value: '#e6ffe6', label: 'Green Highlight' },
+];
+
+<ColorPicker
+  editor={editor}
+  currentTextColor={textColor}
+  currentBackgroundColor={bgColor}
+  textColors={brandTextColors}
+  backgroundColors={brandBackgroundColors}
+  textColorLabel="Text Color"
+  backgroundColorLabel="Highlight"
+/>
+```
+
 ## TypeScript
 
 All components and hooks are fully typed:

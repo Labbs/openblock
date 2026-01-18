@@ -4,6 +4,8 @@
  * Renders a floating menu when the user types "/" at the start of a block.
  * Allows inserting various block types (headings, lists, quotes, etc.).
  *
+ * ## Basic Usage
+ *
  * @example
  * ```tsx
  * import { useOpenBlock, OpenBlockView, SlashMenu } from '@openblock/react';
@@ -18,9 +20,83 @@
  *   );
  * }
  * ```
+ *
+ * ## Custom Items
+ *
+ * Add custom commands to the slash menu using `customItems`.
+ *
+ * @example Adding an AI writing assistant
+ * ```tsx
+ * import { SlashMenu, SlashMenuItem } from '@openblock/react';
+ *
+ * const aiWriteItem: SlashMenuItem = {
+ *   id: 'ai-write',
+ *   title: 'AI Write',
+ *   description: 'Let AI continue writing',
+ *   icon: 'sparkles',
+ *   keywords: ['ai', 'write', 'generate', 'assistant'],
+ *   group: 'ai',
+ *   action: (view, state) => {
+ *     // Your AI writing logic here
+ *   },
+ * };
+ *
+ * <SlashMenu
+ *   editor={editor}
+ *   customItems={[aiWriteItem]}
+ * />
+ * ```
+ *
+ * ## Hiding Default Items
+ *
+ * Use `hideItems` to remove specific default items.
+ *
+ * @example Hide embed and YouTube items
+ * ```tsx
+ * <SlashMenu
+ *   editor={editor}
+ *   hideItems={['embed', 'youtube', 'columns']}
+ * />
+ * ```
+ *
+ * ## Custom Item Order
+ *
+ * Use `itemOrder` to control which items appear and in what order.
+ * Items not in the list will be hidden.
+ *
+ * @example Custom order with groups
+ * ```tsx
+ * <SlashMenu
+ *   editor={editor}
+ *   customItems={[aiWriteItem]}
+ *   itemOrder={[
+ *     'heading1', 'heading2', 'heading3',
+ *     'paragraph',
+ *     'bulletList', 'numberedList', 'checklist',
+ *     'ai-write',  // Custom item
+ *     'quote', 'codeBlock',
+ *   ]}
+ * />
+ * ```
+ *
+ * ## Available Default Items
+ *
+ * Default item IDs include:
+ * - `heading1`, `heading2`, `heading3` - Headings
+ * - `paragraph` - Normal text
+ * - `bulletList`, `numberedList` - Lists
+ * - `checklist` - To-do list
+ * - `quote` - Blockquote
+ * - `codeBlock` - Code block
+ * - `divider` - Horizontal rule
+ * - `image` - Image block
+ * - `table` - Table
+ * - `columns` - Multi-column layout
+ * - `callout-info`, `callout-warning`, `callout-success`, `callout-error` - Callouts
+ * - `embed`, `youtube` - Embeds
  */
 
-import React, { useEffect, useState, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
 import {
   OpenBlockEditor,
   SLASH_MENU_PLUGIN_KEY,
@@ -32,6 +108,9 @@ import {
   closeSlashMenu,
 } from '@labbs/openblock-core';
 
+// Re-export SlashMenuItem for convenience
+export type { SlashMenuItem } from '@labbs/openblock-core';
+
 /**
  * Props for SlashMenu component.
  */
@@ -42,10 +121,29 @@ export interface SlashMenuProps {
   editor: OpenBlockEditor | null;
 
   /**
-   * Custom menu items (optional).
-   * If not provided, uses default items based on schema.
+   * Replace all default items with custom items.
+   * Use `customItems` instead if you want to add items while keeping defaults.
    */
   items?: SlashMenuItem[];
+
+  /**
+   * Custom items to add to the menu (merged with defaults).
+   * These can be referenced by their id in `itemOrder`.
+   */
+  customItems?: SlashMenuItem[];
+
+  /**
+   * Order of items to display (by item ID).
+   * If provided, only items in this list will be shown, in the specified order.
+   * If not provided, shows all items (defaults + custom) in default order.
+   */
+  itemOrder?: string[];
+
+  /**
+   * Item IDs to hide from the menu.
+   * Ignored if `itemOrder` is provided.
+   */
+  hideItems?: string[];
 
   /**
    * Custom render function for menu items.
@@ -103,6 +201,46 @@ const Icons: Record<string, React.FC<{ className?: string }>> = {
       <path d="M5 12h14" />
     </svg>
   ),
+  image: ({ className }) => (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  ),
+  checkSquare: ({ className }) => (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="9 11 12 14 22 4" />
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+    </svg>
+  ),
+  callout: ({ className }) => (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+  table: ({ className }) => (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+      <line x1="15" y1="3" x2="15" y2="21" />
+    </svg>
+  ),
+  embed: ({ className }) => (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  ),
+  youtube: ({ className }) => (
+    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
+    </svg>
+  ),
 };
 
 /**
@@ -112,7 +250,10 @@ const Icons: Record<string, React.FC<{ className?: string }>> = {
  */
 export function SlashMenu({
   editor,
-  items: customItems,
+  items,
+  customItems,
+  itemOrder,
+  hideItems,
   renderItem,
   className,
 }: SlashMenuProps): React.ReactElement | null {
@@ -121,8 +262,46 @@ export function SlashMenu({
   const [openUpward, setOpenUpward] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Get menu items (only when editor is available)
-  const allItems = editor ? (customItems ?? getDefaultSlashMenuItems(editor.pm.state.schema)) : [];
+  // Build the list of all available items
+  const allItems = useMemo(() => {
+    if (!editor) return [];
+
+    // If items prop is provided, use it directly (replaces all defaults)
+    if (items) {
+      return items;
+    }
+
+    // Get default items from schema
+    const defaultItems = getDefaultSlashMenuItems(editor.pm.state.schema);
+
+    // Merge with custom items
+    const mergedItems = customItems ? [...defaultItems, ...customItems] : defaultItems;
+
+    // Create a map for quick lookup
+    const itemMap = new Map<string, SlashMenuItem>();
+    mergedItems.forEach((item) => itemMap.set(item.id, item));
+
+    // Apply itemOrder if provided
+    if (itemOrder) {
+      const orderedItems: SlashMenuItem[] = [];
+      itemOrder.forEach((id) => {
+        const item = itemMap.get(id);
+        if (item) {
+          orderedItems.push(item);
+        }
+      });
+      return orderedItems;
+    }
+
+    // Apply hideItems if provided
+    if (hideItems && hideItems.length > 0) {
+      const hideSet = new Set(hideItems);
+      return mergedItems.filter((item) => !hideSet.has(item.id));
+    }
+
+    return mergedItems;
+  }, [editor, items, customItems, itemOrder, hideItems]);
+
   const filteredItems = menuState ? filterSlashMenuItems(allItems, menuState.query) : [];
 
   // Subscribe to plugin state changes

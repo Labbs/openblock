@@ -16,6 +16,8 @@ const CONTAINER_TYPES = new Set([
   'bulletList',
   'orderedList',
   'listItem',
+  'checkList',
+  'checkListItem',
   'table',
   'tableRow',
   'tableCell',
@@ -67,6 +69,9 @@ export function nodeToBlock(node: PMNode): Block {
           }
         });
       }
+    } else if (node.type.name === 'checkListItem') {
+      // Check list items have inline content directly (not wrapped in paragraph)
+      block.content = nodeContentToInline(node);
     } else if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
       // Table cells: all block children become children
       block.children = [];

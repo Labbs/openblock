@@ -19,6 +19,9 @@ import { createSlashMenuPlugin, SlashMenuConfig } from './slashMenuPlugin';
 import { createBubbleMenuPlugin, BubbleMenuConfig } from './bubbleMenuPlugin';
 import { createMultiBlockSelectionPlugin, MultiBlockSelectionConfig } from './multiBlockSelectionPlugin';
 import { createTablePlugin, TablePluginConfig } from './tablePlugin';
+import { createKeyboardShortcutsPlugin, KeyboardShortcutsConfig } from './keyboardShortcutsPlugin';
+import { createChecklistPlugin, ChecklistPluginConfig } from './checklistPlugin';
+import { createMediaMenuPlugin } from './mediaMenuPlugin';
 
 /**
  * Options for creating plugins.
@@ -79,6 +82,27 @@ export interface CreatePluginsOptions {
   table?: TablePluginConfig | false;
 
   /**
+   * Configuration for keyboard shortcuts.
+   * Set to false to disable the default keyboard shortcuts plugin.
+   * @default true (enabled with all default shortcuts)
+   */
+  keyboardShortcuts?: KeyboardShortcutsConfig | false;
+
+  /**
+   * Configuration for checklist interactions (checkbox clicks).
+   * Set to false to disable the checklist plugin.
+   * @default true (enabled with default config)
+   */
+  checklist?: ChecklistPluginConfig | false;
+
+  /**
+   * Whether to enable the media menu plugin (image/embed selection toolbar).
+   * Set to false to disable the media menu.
+   * @default true (enabled)
+   */
+  mediaMenu?: boolean;
+
+  /**
    * Additional plugins to include.
    */
   additionalPlugins?: Plugin[];
@@ -115,21 +139,17 @@ export interface CreatePluginsOptions {
  * @returns Array of ProseMirror plugins
  */
 export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
-  const { schema, toggleMark, inputRules, dragDrop, slashMenu, bubbleMenu, multiBlockSelection, table, additionalPlugins = [] } = options;
+  const { schema, toggleMark, inputRules, dragDrop, slashMenu, bubbleMenu, multiBlockSelection, table, keyboardShortcuts, checklist, mediaMenu, additionalPlugins = [] } = options;
 
   const plugins: Plugin[] = [
     // History for undo/redo
     history(),
 
+    // Checklist plugin must come before baseKeymap to handle Enter/Shift+Enter in checklists
+    ...(checklist !== false ? [createChecklistPlugin(typeof checklist === 'object' ? checklist : {})] : []),
+
     // Standard editing commands
     keymap(baseKeymap),
-
-    // Undo/redo keyboard shortcuts
-    keymap({
-      'Mod-z': undo,
-      'Mod-y': redo,
-      'Mod-Shift-z': redo,
-    }),
 
     // Drop cursor visual feedback
     dropCursor(),
@@ -141,12 +161,22 @@ export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
     createBlockIdPlugin(),
   ];
 
-  // Add formatting keymap if toggleMark is provided
-  if (toggleMark) {
-    plugins.splice(3, 0, keymap({
+  // Add keyboard shortcuts plugin (includes formatting, undo/redo, block type shortcuts)
+  if (schema && keyboardShortcuts !== false) {
+    const keyboardConfig = typeof keyboardShortcuts === 'object' ? keyboardShortcuts : {};
+    plugins.splice(2, 0, createKeyboardShortcutsPlugin(schema, keyboardConfig));
+  } else if (toggleMark) {
+    // Fallback: if no schema but toggleMark is provided, use the old formatting keymap
+    plugins.splice(2, 0, keymap({
       'Mod-b': () => toggleMark('bold'),
       'Mod-i': () => toggleMark('italic'),
       'Mod-u': () => toggleMark('underline'),
+    }));
+    // Also add undo/redo if no keyboard shortcuts plugin
+    plugins.splice(2, 0, keymap({
+      'Mod-z': undo,
+      'Mod-y': redo,
+      'Mod-Shift-z': redo,
     }));
   }
 
@@ -184,6 +214,14 @@ export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
   if (table !== false) {
     const tableConfig = typeof table === 'object' ? table : {};
     plugins.push(createTablePlugin(tableConfig));
+  }
+
+  // Note: Checklist plugin is added earlier in the plugin array
+  // to ensure it handles Enter/Shift+Enter before baseKeymap
+
+  // Add media menu plugin (image/embed selection toolbar)
+  if (mediaMenu !== false) {
+    plugins.push(createMediaMenuPlugin());
   }
 
   // Add user plugins

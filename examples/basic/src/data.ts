@@ -411,6 +411,255 @@ export const sampleDocument: Block[] = [
     props: {},
   },
   {
+    id: 'heading-checklist',
+    type: 'heading',
+    props: { level: 2 },
+    content: [{ type: 'text', text: 'Checklist / To-do', styles: {} }],
+  },
+  {
+    id: 'para-checklist-intro',
+    type: 'paragraph',
+    props: {},
+    content: [{ type: 'text', text: 'Track tasks with interactive checkboxes:', styles: {} }],
+  },
+  {
+    id: 'checklist-1',
+    type: 'checkList',
+    props: {},
+    children: [
+      { id: 'check-item-1', type: 'checkListItem', props: { checked: true }, content: [{ type: 'text', text: 'Create OpenBlock editor', styles: {} }] },
+      { id: 'check-item-2', type: 'checkListItem', props: { checked: true }, content: [{ type: 'text', text: 'Add image block support', styles: {} }] },
+      { id: 'check-item-3', type: 'checkListItem', props: { checked: true }, content: [{ type: 'text', text: 'Implement checklist blocks', styles: {} }] },
+      { id: 'check-item-4', type: 'checkListItem', props: { checked: false }, content: [{ type: 'text', text: 'Add more features', styles: { italic: true } }] },
+      { id: 'check-item-5', type: 'checkListItem', props: { checked: false }, content: [{ type: 'text', text: 'World domination', styles: { bold: true } }] },
+    ],
+  },
+  {
+    id: 'divider-5',
+    type: 'divider',
+    props: {},
+  },
+  {
+    id: 'heading-images',
+    type: 'heading',
+    props: { level: 2 },
+    content: [{ type: 'text', text: 'Images', styles: {} }],
+  },
+  {
+    id: 'para-images-intro',
+    type: 'paragraph',
+    props: {},
+    content: [{ type: 'text', text: 'Images can be inserted with different alignments:', styles: {} }],
+  },
+  {
+    id: 'image-1',
+    type: 'image',
+    props: {
+      src: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80',
+      alt: 'Code on a screen',
+      caption: 'A beautiful code editor setup',
+      alignment: 'center',
+    },
+  },
+  {
+    id: 'para-images-note',
+    type: 'paragraph',
+    props: {},
+    content: [
+      { type: 'text', text: 'Use the slash menu ', styles: {} },
+      { type: 'text', text: '/image', styles: { code: true } },
+      { type: 'text', text: ' to insert images.', styles: {} },
+    ],
+  },
+  {
+    id: 'divider-6',
+    type: 'divider',
+    props: {},
+  },
+  {
+    id: 'heading-embeds',
+    type: 'heading',
+    props: { level: 2 },
+    content: [{ type: 'text', text: 'Embeds', styles: {} }],
+  },
+  {
+    id: 'para-embeds-intro',
+    type: 'paragraph',
+    props: {},
+    content: [{ type: 'text', text: 'Embed content from YouTube, Vimeo, CodePen, Figma, and more:', styles: {} }],
+  },
+  {
+    id: 'embed-youtube',
+    type: 'embed',
+    props: {
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      provider: 'youtube',
+      embedId: 'dQw4w9WgXcQ',
+      caption: 'A classic YouTube video',
+      aspectRatio: '16:9',
+    },
+  },
+  {
+    id: 'para-embeds-providers',
+    type: 'paragraph',
+    props: {},
+    content: [{ type: 'text', text: 'Supported providers:', styles: { bold: true } }],
+  },
+  {
+    id: 'embeds-list',
+    type: 'bulletList',
+    props: {},
+    children: [
+      { id: 'embed-p1', type: 'listItem', props: {}, content: [{ type: 'text', text: 'YouTube', styles: { bold: true } }, { type: 'text', text: ' - video embeds', styles: {} }] },
+      { id: 'embed-p2', type: 'listItem', props: {}, content: [{ type: 'text', text: 'Vimeo', styles: { bold: true } }, { type: 'text', text: ' - video embeds', styles: {} }] },
+      { id: 'embed-p3', type: 'listItem', props: {}, content: [{ type: 'text', text: 'CodePen', styles: { bold: true } }, { type: 'text', text: ' - interactive code demos', styles: {} }] },
+      { id: 'embed-p4', type: 'listItem', props: {}, content: [{ type: 'text', text: 'CodeSandbox', styles: { bold: true } }, { type: 'text', text: ' - full development environments', styles: {} }] },
+      { id: 'embed-p5', type: 'listItem', props: {}, content: [{ type: 'text', text: 'Figma', styles: { bold: true } }, { type: 'text', text: ' - design files', styles: {} }] },
+      { id: 'embed-p6', type: 'listItem', props: {}, content: [{ type: 'text', text: 'Loom', styles: { bold: true } }, { type: 'text', text: ' - screen recordings', styles: {} }] },
+      { id: 'embed-p7', type: 'listItem', props: {}, content: [{ type: 'text', text: 'Spotify', styles: { bold: true } }, { type: 'text', text: ' - music and podcasts', styles: {} }] },
+    ],
+  },
+  {
+    id: 'para-embeds-note',
+    type: 'paragraph',
+    props: {},
+    content: [
+      { type: 'text', text: 'Use the slash menu ', styles: {} },
+      { type: 'text', text: '/embed', styles: { code: true } },
+      { type: 'text', text: ' or ', styles: {} },
+      { type: 'text', text: '/youtube', styles: { code: true } },
+      { type: 'text', text: ' to insert embeds.', styles: {} },
+    ],
+  },
+  {
+    id: 'divider-7',
+    type: 'divider',
+    props: {},
+  },
+  {
+    id: 'heading-shortcuts',
+    type: 'heading',
+    props: { level: 2 },
+    content: [{ type: 'text', text: 'Keyboard Shortcuts', styles: {} }],
+  },
+  {
+    id: 'para-shortcuts-intro',
+    type: 'paragraph',
+    props: {},
+    content: [{ type: 'text', text: 'OpenBlock supports many keyboard shortcuts:', styles: {} }],
+  },
+  {
+    id: 'shortcuts-table',
+    type: 'table',
+    props: {},
+    children: [
+      {
+        id: 'shortcuts-header',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-h1', type: 'tableHeader', props: {}, content: [{ type: 'text', text: 'Shortcut', styles: { bold: true } }] },
+          { id: 'sh-h2', type: 'tableHeader', props: {}, content: [{ type: 'text', text: 'Action', styles: { bold: true } }] },
+        ],
+      },
+      {
+        id: 'sh-row-1',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c1-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+B', styles: { code: true } }] },
+          { id: 'sh-c1-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Bold', styles: { bold: true } }] },
+        ],
+      },
+      {
+        id: 'sh-row-2',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c2-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+I', styles: { code: true } }] },
+          { id: 'sh-c2-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Italic', styles: { italic: true } }] },
+        ],
+      },
+      {
+        id: 'sh-row-3',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c3-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+U', styles: { code: true } }] },
+          { id: 'sh-c3-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Underline', styles: { underline: true } }] },
+        ],
+      },
+      {
+        id: 'sh-row-4',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c4-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+Shift+S', styles: { code: true } }] },
+          { id: 'sh-c4-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Strikethrough', styles: { strikethrough: true } }] },
+        ],
+      },
+      {
+        id: 'sh-row-5',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c5-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+E', styles: { code: true } }] },
+          { id: 'sh-c5-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Inline code', styles: { code: true } }] },
+        ],
+      },
+      {
+        id: 'sh-row-6',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c6-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+Z', styles: { code: true } }] },
+          { id: 'sh-c6-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Undo', styles: {} }] },
+        ],
+      },
+      {
+        id: 'sh-row-7',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c7-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+Shift+Z', styles: { code: true } }] },
+          { id: 'sh-c7-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Redo', styles: {} }] },
+        ],
+      },
+      {
+        id: 'sh-row-8',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c8-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+Alt+1/2/3', styles: { code: true } }] },
+          { id: 'sh-c8-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Heading 1/2/3', styles: {} }] },
+        ],
+      },
+      {
+        id: 'sh-row-9',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c9-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+Shift+8', styles: { code: true } }] },
+          { id: 'sh-c9-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Bullet list', styles: {} }] },
+        ],
+      },
+      {
+        id: 'sh-row-10',
+        type: 'tableRow',
+        props: {},
+        children: [
+          { id: 'sh-c10-1', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Cmd+Shift+9', styles: { code: true } }] },
+          { id: 'sh-c10-2', type: 'tableCell', props: {}, content: [{ type: 'text', text: 'Checklist', styles: {} }] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'divider-8',
+    type: 'divider',
+    props: {},
+  },
+  {
     id: 'heading-api',
     type: 'heading',
     props: { level: 2 },

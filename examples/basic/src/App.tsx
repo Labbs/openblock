@@ -1,4 +1,4 @@
-import { useOpenBlock, OpenBlockView, useEditorContent, SlashMenu, BubbleMenu, TableHandles } from '@labbs/openblock-react';
+import { useOpenBlock, OpenBlockView, useEditorContent, SlashMenu, BubbleMenu, TableHandles, MediaMenu } from '@labbs/openblock-react';
 import { sampleDocument } from './data';
 // CSS is now auto-injected by OpenBlockEditor (injectStyles: true by default)
 import './styles.css';
@@ -36,6 +36,13 @@ export default function App() {
               {'</>'}
             </button>
             <span className="separator" />
+            <button onClick={() => editor?.undo()} title="Undo (Cmd+Z)" disabled={!editor}>
+              ↩
+            </button>
+            <button onClick={() => editor?.redo()} title="Redo (Cmd+Shift+Z)" disabled={!editor}>
+              ↪
+            </button>
+            <span className="separator" />
             <button onClick={() => editor && console.log(editor.getDocument())} title="Log document to console" disabled={!editor}>
               Log JSON
             </button>
@@ -49,6 +56,7 @@ export default function App() {
             <SlashMenu editor={editor} />
             <BubbleMenu editor={editor} />
             <TableHandles editor={editor} />
+            <MediaMenu editor={editor} />
           </div>
         </div>
 

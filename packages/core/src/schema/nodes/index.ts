@@ -31,3 +31,4 @@ export { columnNode } from './column';
 export { tableNode } from './table';
 export { tableRowNode } from './tableRow';
 export { tableCellNode, tableHeaderNode } from './tableCell';
+

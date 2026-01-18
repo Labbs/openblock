@@ -19,13 +19,20 @@
  * ```
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { OpenBlockEditor, EditorConfig, Block } from '@labbs/openblock-core';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { OpenBlockEditor, EditorConfig, Block, SlashMenuItem } from '@labbs/openblock-core';
+import type { ReactBlockSpec, PropSchema } from '../blocks';
 
 /**
  * Options for useOpenBlock hook
  */
-export interface UseOpenBlockOptions extends Omit<EditorConfig, 'element'> {}
+export interface UseOpenBlockOptions extends Omit<EditorConfig, 'element'> {
+  /**
+   * Custom React block specifications to register with the editor.
+   * These blocks will be rendered using React components.
+   */
+  customBlocks?: ReactBlockSpec<PropSchema>[];
+}
 
 /**
  * Create and manage an OpenBlockEditor instance
@@ -41,13 +48,49 @@ export interface UseOpenBlockOptions extends Omit<EditorConfig, 'element'> {}
 export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor | null {
   const [editor, setEditor] = useState<OpenBlockEditor | null>(null);
   const optionsRef = useRef(options);
+  // Store a reference to the editor that nodeViews can use
+  const editorRef = useRef<OpenBlockEditor | null>(null);
 
   useEffect(() => {
-    const newEditor = new OpenBlockEditor(optionsRef.current);
+    const { customBlocks, ...editorOptions } = optionsRef.current;
+
+    // Build nodeViews from custom blocks
+    // We use a closure that references editorRef so nodeViews can access the editor
+    const nodeViews: Record<string, any> = {};
+
+    if (customBlocks && customBlocks.length > 0) {
+      for (const blockSpec of customBlocks) {
+        // Create a wrapper that will use the editor from the ref
+        nodeViews[blockSpec.type] = (node: any, view: any, getPos: any) => {
+          // editorRef.current will be set by the time this is called
+          const nodeViewConstructor = blockSpec.createNodeView(editorRef.current!);
+          return nodeViewConstructor(node, view, getPos);
+        };
+      }
+    }
+
+    // Merge with existing prosemirror config
+    const prosemirrorConfig = {
+      ...editorOptions.prosemirror,
+      nodeViews: {
+        ...editorOptions.prosemirror?.nodeViews,
+        ...nodeViews,
+      },
+    };
+
+    // Create the editor with nodeViews
+    const newEditor = new OpenBlockEditor({
+      ...editorOptions,
+      prosemirror: Object.keys(nodeViews).length > 0 ? prosemirrorConfig : editorOptions.prosemirror,
+    });
+
+    // Store in ref so nodeViews can access it
+    editorRef.current = newEditor;
     setEditor(newEditor);
 
     return () => {
       newEditor.destroy();
+      editorRef.current = null;
     };
   }, []);
 
@@ -132,4 +175,53 @@ export function useEditorFocus(editor: OpenBlockEditor | null): boolean {
   }, [editor]);
 
   return focused;
+}
+
+/**
+ * Hook to generate slash menu items from custom React blocks
+ *
+ * @param editor - The OpenBlockEditor instance
+ * @param customBlocks - Array of custom block specifications
+ * @returns Array of SlashMenuItem for custom blocks that have slashMenu config
+ *
+ * @example
+ * ```tsx
+ * const customItems = useCustomSlashMenuItems(editor, [DatabaseBlock, EmbedBlock]);
+ * return <SlashMenu editor={editor} additionalItems={customItems} />;
+ * ```
+ */
+export function useCustomSlashMenuItems(
+  editor: OpenBlockEditor | null,
+  customBlocks: ReactBlockSpec<PropSchema>[]
+): SlashMenuItem[] {
+  return useMemo(() => {
+    if (!editor || editor.isDestroyed) return [];
+
+    return customBlocks
+      .filter((block) => block.slashMenu)
+      .map((block): SlashMenuItem => {
+        const { slashMenu, type, propSchema } = block;
+        return {
+          id: type,
+          title: slashMenu!.title,
+          description: slashMenu!.description,
+          icon: slashMenu!.icon,
+          keywords: slashMenu!.aliases,
+          group: slashMenu!.group || 'Custom',
+          action: (view) => {
+            // Build default attrs from propSchema
+            const attrs: Record<string, unknown> = {};
+            for (const [key, value] of Object.entries(propSchema)) {
+              attrs[key] = value.default;
+            }
+            // Create and insert the node
+            const nodeType = view.state.schema.nodes[type];
+            if (nodeType) {
+              const node = nodeType.create(attrs);
+              view.dispatch(view.state.tr.replaceSelectionWith(node));
+            }
+          },
+        };
+      });
+  }, [editor, customBlocks]);
 }

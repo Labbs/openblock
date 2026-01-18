@@ -4,6 +4,220 @@ This guide explains how to create custom block types for the OpenBlock editor.
 
 ## Overview
 
+OpenBlock provides two ways to create custom blocks:
+
+1. **React Blocks (Recommended)** - Use `createReactBlockSpec` for React-based blocks with minimal boilerplate
+2. **ProseMirror Blocks** - Define node specs directly for full control
+
+## React Custom Blocks (Recommended)
+
+The easiest way to create custom blocks in React applications is using `createReactBlockSpec`.
+
+### Quick Example
+
+```tsx
+import { createReactBlockSpec } from '@labbs/openblock-react';
+
+// Define your custom block
+const AlertBlock = createReactBlockSpec(
+  {
+    type: 'alert',
+    propSchema: {
+      alertType: { default: 'info' as 'info' | 'warning' | 'error' },
+      title: { default: '' },
+    },
+    content: 'none', // or 'inline' for editable text content
+  },
+  {
+    render: ({ block, editor, isEditable }) => (
+      <div className={`alert alert-${block.props.alertType}`}>
+        <strong>{block.props.title || 'Alert'}</strong>
+        {/* Your custom UI here */}
+      </div>
+    ),
+    slashMenu: {
+      title: 'Alert',
+      description: 'Insert an alert box',
+      icon: 'alert',
+      aliases: ['warning', 'info', 'error'],
+      group: 'Basic',
+    },
+  }
+);
+```
+
+### Using Custom Blocks
+
+Register your custom blocks with the editor:
+
+```tsx
+import { useOpenBlock, OpenBlockView, SlashMenu, useCustomSlashMenuItems } from '@labbs/openblock-react';
+
+// Define all your custom blocks
+const CUSTOM_BLOCKS = [AlertBlock, EmbedBlock, DatabaseBlock];
+
+function Editor() {
+  const editor = useOpenBlock({
+    initialContent: [...],
+    customBlocks: CUSTOM_BLOCKS,
+  });
+
+  // Generate slash menu items from custom blocks
+  const customSlashMenuItems = useCustomSlashMenuItems(editor, CUSTOM_BLOCKS);
+
+  return (
+    <>
+      <OpenBlockView editor={editor} />
+      <SlashMenu editor={editor} additionalItems={customSlashMenuItems} />
+    </>
+  );
+}
+```
+
+### API Reference
+
+#### `createReactBlockSpec(spec, implementation)`
+
+Creates a custom React block specification.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `spec.type` | `string` | Unique block type identifier |
+| `spec.propSchema` | `PropSchema` | Property definitions with defaults |
+| `spec.content` | `'none' \| 'inline'` | Content model |
+| `implementation.render` | `React.ComponentType` | React component to render |
+| `implementation.slashMenu` | `SlashMenuConfig` | Optional slash menu configuration |
+
+**PropSchema:**
+
+```typescript
+interface PropSchema {
+  [key: string]: {
+    default: unknown;  // Default value for the property
+  };
+}
+```
+
+**SlashMenuConfig:**
+
+```typescript
+interface SlashMenuConfig {
+  title: string;           // Display title in menu
+  description?: string;    // Description shown below title
+  icon?: string;           // Icon identifier (e.g., 'heading1', 'list')
+  aliases?: string[];      // Alternative search keywords
+  group?: string;          // Category (e.g., 'Basic', 'Embeds')
+}
+```
+
+**Render Props:**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `block` | `{ id, type, props }` | Block data with typed props |
+| `editor` | `OpenBlockEditor` | Editor instance |
+| `isEditable` | `boolean` | Whether editing is enabled |
+| `contentRef` | `React.RefObject` | For `content: 'inline'` blocks |
+
+#### `useCustomSlashMenuItems(editor, customBlocks)`
+
+Generates slash menu items from custom blocks that have `slashMenu` configured.
+
+```tsx
+const customItems = useCustomSlashMenuItems(editor, CUSTOM_BLOCKS);
+return <SlashMenu editor={editor} additionalItems={customItems} />;
+```
+
+#### `useUpdateBlock(editor, blockId)`
+
+Hook to update block properties from within a block component.
+
+```tsx
+function MyBlockRender({ block, editor }) {
+  const updateBlock = useUpdateBlock(editor, block.id);
+
+  return (
+    <button onClick={() => updateBlock({ title: 'New Title' })}>
+      Update Title
+    </button>
+  );
+}
+```
+
+### Content Types
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `'none'` | No editable content | Embeds, widgets, databases |
+| `'inline'` | Editable text content | Notes, callouts with text |
+
+For `content: 'inline'`, use the `contentRef` to place the editable area:
+
+```tsx
+render: ({ block, contentRef }) => (
+  <div className="my-block">
+    <div className="my-block-header">{block.props.title}</div>
+    <div ref={contentRef} className="my-block-content" />
+  </div>
+)
+```
+
+### Complete Example: Database Block
+
+```tsx
+import { createReactBlockSpec, useUpdateBlock } from '@labbs/openblock-react';
+
+const DatabaseBlock = createReactBlockSpec(
+  {
+    type: 'database',
+    propSchema: {
+      databaseId: { default: '' },
+      showHeader: { default: true },
+      rowLimit: { default: null as number | null },
+    },
+    content: 'none',
+  },
+  {
+    render: ({ block, editor, isEditable }) => {
+      const updateBlock = useUpdateBlock(editor, block.id);
+      const { databaseId, showHeader, rowLimit } = block.props;
+
+      if (!databaseId) {
+        return (
+          <DatabaseSelector
+            onSelect={(id) => updateBlock({ databaseId: id })}
+          />
+        );
+      }
+
+      return (
+        <DatabaseView
+          databaseId={databaseId}
+          showHeader={showHeader}
+          rowLimit={rowLimit}
+          isEditable={isEditable}
+        />
+      );
+    },
+    slashMenu: {
+      title: 'Database',
+      description: 'Insert an inline database',
+      icon: 'database',
+      aliases: ['db', 'table', 'spreadsheet'],
+      group: 'Embeds',
+    },
+  }
+);
+```
+
+---
+
+## ProseMirror Custom Blocks
+
+For advanced use cases requiring full control over the ProseMirror integration, you can define blocks directly.
+
 OpenBlock is built on ProseMirror and uses a block-based document model. Each block type is defined by:
 
 1. **Node Spec** - ProseMirror schema definition

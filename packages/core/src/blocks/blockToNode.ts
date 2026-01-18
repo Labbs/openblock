@@ -60,6 +60,16 @@ export function blockToNode(schema: Schema, block: Block): PMNode {
     return nodeType.create(attrs, [paragraph]);
   }
 
+  // Handle check list items - they have inline content directly
+  if (block.type === 'checkListItem' && block.content) {
+    return nodeType.create(attrs, inlineContentToNodes(schema, block.content));
+  }
+
+  // Handle image blocks - they are atomic and use props for src, alt, etc.
+  if (block.type === 'image') {
+    return nodeType.create(attrs);
+  }
+
   // Handle table cells - they need block content (default to paragraph if only inline content)
   if ((block.type === 'tableCell' || block.type === 'tableHeader') && block.content && !block.children) {
     const paragraph = schema.node('paragraph', null, inlineContentToNodes(schema, block.content));

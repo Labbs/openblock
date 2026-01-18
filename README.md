@@ -257,6 +257,56 @@ When hovering over a table:
 - **Column handles** appear on top — click to insert/delete columns
 - **Extend buttons** appear on the right and bottom — click to add rows/columns
 
+## Custom Blocks
+
+Create custom React blocks with `createReactBlockSpec`:
+
+```tsx
+import { createReactBlockSpec, useOpenBlock, SlashMenu, useCustomSlashMenuItems } from '@labbs/openblock-react';
+
+// Define a custom block
+const AlertBlock = createReactBlockSpec(
+  {
+    type: 'alert',
+    propSchema: {
+      alertType: { default: 'info' },
+      message: { default: '' },
+    },
+    content: 'none',
+  },
+  {
+    render: ({ block }) => (
+      <div className={`alert alert-${block.props.alertType}`}>
+        {block.props.message}
+      </div>
+    ),
+    slashMenu: {
+      title: 'Alert',
+      description: 'Insert an alert box',
+      aliases: ['warning', 'info'],
+      group: 'Basic',
+    },
+  }
+);
+
+// Use custom blocks
+const CUSTOM_BLOCKS = [AlertBlock];
+
+function Editor() {
+  const editor = useOpenBlock({ customBlocks: CUSTOM_BLOCKS });
+  const customItems = useCustomSlashMenuItems(editor, CUSTOM_BLOCKS);
+
+  return (
+    <>
+      <OpenBlockView editor={editor} />
+      <SlashMenu editor={editor} additionalItems={customItems} />
+    </>
+  );
+}
+```
+
+See [Custom Blocks Guide](docs/custom-blocks.md) for more details.
+
 ## Documentation
 
 | Guide | Description |

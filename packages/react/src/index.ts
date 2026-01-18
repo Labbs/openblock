@@ -29,6 +29,7 @@ export {
   useEditorContent,
   useEditorSelection,
   useEditorFocus,
+  useCustomSlashMenuItems,
 } from './hooks';
 export type { UseOpenBlockOptions } from './hooks';
 
@@ -62,6 +63,21 @@ export type {
   ColorOption,
 } from './components';
 
+// Custom blocks
+export {
+  createReactBlockSpec,
+  useBlockEditor,
+  useUpdateBlock,
+} from './blocks';
+export type {
+  PropSchema,
+  BlockSpec,
+  BlockRenderProps,
+  BlockImplementation,
+  ReactBlockSpec,
+  SlashMenuConfig,
+} from './blocks';
+
 // Re-export core types for convenience
 export type {
   OpenBlockEditor,
@@ -73,4 +89,5 @@ export type {
   TextStyles,
   StyledText,
   InlineContent,
+  SlashMenuItem,
 } from '@labbs/openblock-core';

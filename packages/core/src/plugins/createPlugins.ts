@@ -141,9 +141,17 @@ export interface CreatePluginsOptions {
 export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
   const { schema, toggleMark, inputRules, dragDrop, slashMenu, bubbleMenu, multiBlockSelection, table, keyboardShortcuts, checklist, mediaMenu, additionalPlugins = [] } = options;
 
+  // Create slash menu plugin early so we can add it before baseKeymap
+  const slashMenuPlugin = slashMenu !== false
+    ? createSlashMenuPlugin(typeof slashMenu === 'object' ? slashMenu : {})
+    : null;
+
   const plugins: Plugin[] = [
     // History for undo/redo
     history(),
+
+    // Slash menu plugin must come before baseKeymap to handle Enter when menu is active
+    ...(slashMenuPlugin ? [slashMenuPlugin] : []),
 
     // Checklist plugin must come before baseKeymap to handle Enter/Shift+Enter in checklists
     ...(checklist !== false ? [createChecklistPlugin(typeof checklist === 'object' ? checklist : {})] : []),
@@ -192,11 +200,8 @@ export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
     plugins.push(createDragDropPlugin(dragDropConfig));
   }
 
-  // Add slash menu plugin
-  if (slashMenu !== false) {
-    const slashMenuConfig = typeof slashMenu === 'object' ? slashMenu : {};
-    plugins.push(createSlashMenuPlugin(slashMenuConfig));
-  }
+  // Note: Slash menu plugin is added earlier in the plugin array
+  // to ensure it handles Enter before baseKeymap
 
   // Add bubble menu plugin
   if (bubbleMenu !== false) {

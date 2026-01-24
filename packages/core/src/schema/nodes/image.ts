@@ -62,18 +62,17 @@ export const imageNode: NodeSpec = {
 
     // If no src, show a placeholder
     if (!src) {
-      const children: (string | (string | Record<string, string> | 0)[])[] = [
-        [
-          'div',
-          { class: 'openblock-image-placeholder' },
-          ['span', { class: 'openblock-image-placeholder-icon' }],
-          ['span', { class: 'openblock-image-placeholder-text' }, 'Click to add an image'],
-        ],
-      ];
+      const placeholderDiv = [
+        'div',
+        { class: 'openblock-image-placeholder' },
+        ['span', { class: 'openblock-image-placeholder-icon' }],
+        ['span', { class: 'openblock-image-placeholder-text' }, 'Click to add an image'],
+      ] as const;
+
       if (caption) {
-        children.push(['figcaption', {}, caption]);
+        return ['figure', figureAttrs, placeholderDiv, ['figcaption', {}, caption]];
       }
-      return ['figure', figureAttrs, ...children];
+      return ['figure', figureAttrs, placeholderDiv];
     }
 
     const imgAttrs: Record<string, string> = { src, alt };

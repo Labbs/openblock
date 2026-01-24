@@ -7,9 +7,9 @@
  * @module
  */
 
-import { Plugin, PluginKey, EditorState, Transaction } from 'prosemirror-state';
+import { Plugin, PluginKey, EditorState } from 'prosemirror-state';
 import { EditorView, Decoration, DecorationSet } from 'prosemirror-view';
-import { Node as PMNode, ResolvedPos } from 'prosemirror-model';
+import { Node as PMNode } from 'prosemirror-model';
 
 /**
  * State for multi-block selection.
@@ -59,9 +59,8 @@ function getBlockAtPos(
  */
 function getAllBlockPositions(doc: PMNode): number[] {
   const positions: number[] = [];
-  let pos = 0;
 
-  doc.forEach((node, offset) => {
+  doc.forEach((_node, offset) => {
     positions.push(offset);
   });
 
@@ -146,7 +145,7 @@ export function createMultiBlockSelectionPlugin(
         };
       },
 
-      apply(tr, state, oldEditorState, newEditorState): MultiBlockSelectionState {
+      apply(tr, state, _oldEditorState, newEditorState): MultiBlockSelectionState {
         // Check for meta to update state
         const meta = tr.getMeta(MULTI_BLOCK_SELECTION_KEY);
         if (meta) {
@@ -189,7 +188,7 @@ export function createMultiBlockSelectionPlugin(
         return createBlockSelectionDecorations(state, pluginState.selectedBlocks);
       },
 
-      handleClick(view: EditorView, pos: number, event: MouseEvent): boolean {
+      handleClick(view: EditorView, _pos: number, event: MouseEvent): boolean {
         // Clear selection on regular click without modifiers
         if (!event.shiftKey && !event.metaKey && !event.ctrlKey) {
           const state = MULTI_BLOCK_SELECTION_KEY.getState(view.state);
@@ -269,7 +268,7 @@ export function createMultiBlockSelectionPlugin(
 
           const state = MULTI_BLOCK_SELECTION_KEY.getState(view.state);
 
-          if (event.shiftKey && state?.anchorPos !== null) {
+          if (event.shiftKey && state && state.anchorPos !== null) {
             // Range selection
             const blocks = getBlocksInRange(view.state.doc, state.anchorPos, block.pos);
             view.dispatch(

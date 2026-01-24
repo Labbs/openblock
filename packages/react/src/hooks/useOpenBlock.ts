@@ -61,10 +61,10 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
     if (customBlocks && customBlocks.length > 0) {
       for (const blockSpec of customBlocks) {
         // Create a wrapper that will use the editor from the ref
-        nodeViews[blockSpec.type] = (node: any, view: any, getPos: any) => {
+        nodeViews[blockSpec.type] = (node: any, view: any, getPos: any, decorations: any, innerDecorations: any) => {
           // editorRef.current will be set by the time this is called
           const nodeViewConstructor = blockSpec.createNodeView(editorRef.current!);
-          return nodeViewConstructor(node, view, getPos);
+          return nodeViewConstructor(node, view, getPos, decorations, innerDecorations);
         };
       }
     }

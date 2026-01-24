@@ -31,10 +31,11 @@ import React from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import {
   type OpenBlockEditor,
+  type NodeView,
+  type NodeViewConstructor,
   Node as PMNode,
   EditorView,
 } from '@labbs/openblock-core';
-import type { NodeView, NodeViewConstructor } from 'prosemirror-view';
 
 /**
  * Property schema definition for a block
@@ -208,7 +209,7 @@ export function createReactBlockSpec<T extends PropSchema>(
 
   // Create NodeView constructor
   const createNodeView = (editor: OpenBlockEditor): NodeViewConstructor => {
-    return (node: PMNode, _view: EditorView, _getPos: () => number | undefined): NodeView => {
+    return (node: PMNode, _view: EditorView, _getPos: () => number | undefined, _decorations, _innerDecorations): NodeView => {
       // Create container
       const dom = document.createElement('div');
       dom.className = `openblock-custom-block openblock-${type}`;

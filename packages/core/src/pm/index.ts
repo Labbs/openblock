@@ -35,3 +35,5 @@ export {
   Slice,
   Fragment,
 } from './ProseMirrorAPI';
+
+export type { NodeView, NodeViewConstructor } from './ProseMirrorAPI';

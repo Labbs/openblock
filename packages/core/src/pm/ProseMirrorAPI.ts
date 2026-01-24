@@ -26,7 +26,7 @@ import {
   DecorationSet,
   DecorationAttrs,
 } from 'prosemirror-view';
-import type { DecorationSource } from 'prosemirror-view';
+import type { DecorationSource, NodeView, NodeViewConstructor } from 'prosemirror-view';
 import {
   EditorState,
   Transaction,
@@ -689,3 +689,5 @@ export {
   Slice,
   Fragment,
 };
+
+export type { NodeView, NodeViewConstructor };

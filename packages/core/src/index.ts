@@ -37,7 +37,7 @@ export type { EditorConfig, EditorEvents, EventHandler } from './editor';
 // ===========================================================================
 
 export { ProseMirrorAPI } from './pm';
-export type { WidgetDecorationSpec, Coords, PosInfo, Command } from './pm';
+export type { WidgetDecorationSpec, Coords, PosInfo, Command, NodeView, NodeViewConstructor } from './pm';
 
 // Re-export ProseMirror classes for convenience
 export {

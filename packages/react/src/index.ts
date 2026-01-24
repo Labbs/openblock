@@ -53,7 +53,6 @@ export type {
   OpenBlockViewProps,
   OpenBlockViewRef,
   SlashMenuProps,
-  SlashMenuItem,
   BubbleMenuProps,
   BubbleMenuItem,
   TableMenuProps,

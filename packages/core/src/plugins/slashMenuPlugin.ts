@@ -9,6 +9,7 @@
 
 import { Plugin, PluginKey, EditorState, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
+import { setBlockType } from 'prosemirror-commands';
 
 /**
  * Plugin key for accessing slash menu state.
@@ -189,8 +190,8 @@ export function createSlashMenuPlugin(config: SlashMenuConfig = {}): Plugin {
           return true;
         }
 
-        // Let arrow keys and Enter be handled by the menu component
-        // via DOM events, not here
+        // Let Enter and arrow keys be handled by the menu component via DOM events
+        // The React component uses capture phase to intercept before ProseMirror
         return false;
       },
 
@@ -296,6 +297,32 @@ export function executeSlashCommand(
 }
 
 /**
+ * Helper function to replace the current block with a new node.
+ * This finds the parent block containing the cursor and replaces it entirely.
+ *
+ * @param view - The editor view
+ * @param node - The new node to insert
+ */
+function replaceCurrentBlock(view: EditorView, node: ReturnType<typeof view.state.schema.nodes.paragraph.create>): void {
+  const { $from } = view.state.selection;
+
+  // Find the parent block (depth 1 is the direct child of doc)
+  const blockDepth = $from.depth > 0 ? 1 : 0;
+  const blockStart = $from.start(blockDepth);
+  const blockEnd = $from.end(blockDepth);
+
+  // Replace the entire block with the new node
+  const tr = view.state.tr;
+  tr.replaceWith(blockStart - 1, blockEnd + 1, node);
+
+  // Position cursor inside the new block
+  const newPos = blockStart;
+  tr.setSelection(TextSelection.create(tr.doc, newPos));
+
+  view.dispatch(tr);
+}
+
+/**
  * Default menu items for the slash menu.
  *
  * @param schema - The ProseMirror schema
@@ -315,8 +342,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         keywords: ['h1', 'title', 'large'],
         group: 'Basic blocks',
         action: (view, _state) => {
-          const node = schema.nodes.heading.create({ level: 1 });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
+          setBlockType(schema.nodes.heading, { level: 1 })(view.state, view.dispatch);
         },
       },
       {
@@ -327,8 +353,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         keywords: ['h2', 'subtitle'],
         group: 'Basic blocks',
         action: (view, _state) => {
-          const node = schema.nodes.heading.create({ level: 2 });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
+          setBlockType(schema.nodes.heading, { level: 2 })(view.state, view.dispatch);
         },
       },
       {
@@ -339,8 +364,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         keywords: ['h3'],
         group: 'Basic blocks',
         action: (view, _state) => {
-          const node = schema.nodes.heading.create({ level: 3 });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
+          setBlockType(schema.nodes.heading, { level: 3 })(view.state, view.dispatch);
         },
       }
     );
@@ -385,7 +409,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
     });
   }
 
-  // Quote
+  // Quote - blockquote accepts inline content directly
   if (schema.nodes.blockquote) {
     items.push({
       id: 'quote',
@@ -396,13 +420,18 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
       group: 'Basic blocks',
       action: (view, _state) => {
         const node = schema.nodes.blockquote.create();
-        view.dispatch(view.state.tr.replaceSelectionWith(node));
+        replaceCurrentBlock(view, node);
       },
     });
   }
 
-  // Callout
+  // Callout - callouts accept inline content directly
   if (schema.nodes.callout) {
+    const createCalloutAction = (calloutType: string) => (view: EditorView, _state: SlashMenuState) => {
+      const node = schema.nodes.callout.create({ calloutType });
+      replaceCurrentBlock(view, node);
+    };
+
     items.push(
       {
         id: 'calloutInfo',
@@ -411,10 +440,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'info',
         keywords: ['callout', 'alert', 'note', 'info', 'highlight'],
         group: 'Basic blocks',
-        action: (view, _state) => {
-          const node = schema.nodes.callout.create({ calloutType: 'info' });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
-        },
+        action: createCalloutAction('info'),
       },
       {
         id: 'calloutWarning',
@@ -423,10 +449,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'alertTriangle',
         keywords: ['callout', 'alert', 'warning', 'caution'],
         group: 'Basic blocks',
-        action: (view, _state) => {
-          const node = schema.nodes.callout.create({ calloutType: 'warning' });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
-        },
+        action: createCalloutAction('warning'),
       },
       {
         id: 'calloutSuccess',
@@ -435,10 +458,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'checkCircle',
         keywords: ['callout', 'success', 'done', 'tip'],
         group: 'Basic blocks',
-        action: (view, _state) => {
-          const node = schema.nodes.callout.create({ calloutType: 'success' });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
-        },
+        action: createCalloutAction('success'),
       },
       {
         id: 'calloutError',
@@ -447,10 +467,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'xCircle',
         keywords: ['callout', 'error', 'danger', 'important'],
         group: 'Basic blocks',
-        action: (view, _state) => {
-          const node = schema.nodes.callout.create({ calloutType: 'error' });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
-        },
+        action: createCalloutAction('error'),
       }
     );
   }
@@ -465,8 +482,11 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
       keywords: ['pre', 'programming', 'snippet'],
       group: 'Basic blocks',
       action: (view, _state) => {
-        const node = schema.nodes.codeBlock.create();
-        view.dispatch(view.state.tr.replaceSelectionWith(node));
+        // Code blocks can contain text directly, create with empty text node
+        const node = schema.nodes.codeBlock.create(null, schema.text(' '));
+        const tr = view.state.tr.replaceSelectionWith(node);
+        // Position cursor at start of code block (after the space we added)
+        view.dispatch(tr);
       },
     });
   }

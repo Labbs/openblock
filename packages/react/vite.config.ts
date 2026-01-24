@@ -19,6 +19,7 @@ export default defineConfig({
       external: [
         'react',
         'react-dom',
+        'react-dom/client',
         'react/jsx-runtime',
         '@labbs/openblock-core',
         'prosemirror-commands',

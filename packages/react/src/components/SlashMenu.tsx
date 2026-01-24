@@ -330,27 +330,33 @@ export function SlashMenu({
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault();
+          event.stopPropagation();
           setSelectedIndex((i) => Math.min(i + 1, filteredItems.length - 1));
           break;
         case 'ArrowUp':
           event.preventDefault();
+          event.stopPropagation();
           setSelectedIndex((i) => Math.max(i - 1, 0));
           break;
         case 'Enter':
           event.preventDefault();
+          event.stopPropagation();
           if (filteredItems[selectedIndex]) {
             handleSelect(filteredItems[selectedIndex]);
           }
           break;
         case 'Escape':
           event.preventDefault();
+          event.stopPropagation();
           closeSlashMenu(editor.pm.view);
           break;
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    // Use capture phase on editor element to intercept events BEFORE ProseMirror handles them
+    const editorElement = editor.pm.view.dom;
+    editorElement.addEventListener('keydown', handleKeyDown, true);
+    return () => editorElement.removeEventListener('keydown', handleKeyDown, true);
   }, [menuState?.active, filteredItems, selectedIndex, editor]);
 
   // Handle item selection

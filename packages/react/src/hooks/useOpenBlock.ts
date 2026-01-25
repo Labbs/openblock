@@ -20,7 +20,13 @@
  */
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { OpenBlockEditor, EditorConfig, Block, SlashMenuItem } from '@labbs/openblock-core';
+import {
+  OpenBlockEditor,
+  EditorConfig,
+  Block,
+  SlashMenuItem,
+  NodeViewConstructor,
+} from '@labbs/openblock-core';
 import type { ReactBlockSpec, PropSchema } from '../blocks';
 
 /**
@@ -56,14 +62,18 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
 
     // Build nodeViews from custom blocks
     // We use a closure that references editorRef so nodeViews can access the editor
-    const nodeViews: Record<string, any> = {};
+    const nodeViews: Record<string, NodeViewConstructor> = {};
 
     if (customBlocks && customBlocks.length > 0) {
       for (const blockSpec of customBlocks) {
         // Create a wrapper that will use the editor from the ref
-        nodeViews[blockSpec.type] = (node: any, view: any, getPos: any, decorations: any, innerDecorations: any) => {
+        nodeViews[blockSpec.type] = (node, view, getPos, decorations, innerDecorations) => {
           // editorRef.current will be set by the time this is called
-          const nodeViewConstructor = blockSpec.createNodeView(editorRef.current!);
+          const editor = editorRef.current;
+          if (!editor) {
+            throw new Error('Editor not initialized');
+          }
+          const nodeViewConstructor = blockSpec.createNodeView(editor);
           return nodeViewConstructor(node, view, getPos, decorations, innerDecorations);
         };
       }
@@ -198,16 +208,18 @@ export function useCustomSlashMenuItems(
     if (!editor || editor.isDestroyed) return [];
 
     return customBlocks
-      .filter((block) => block.slashMenu)
+      .filter((block): block is ReactBlockSpec<PropSchema> & { slashMenu: NonNullable<ReactBlockSpec<PropSchema>['slashMenu']> } =>
+        block.slashMenu !== undefined
+      )
       .map((block): SlashMenuItem => {
         const { slashMenu, type, propSchema } = block;
         return {
           id: type,
-          title: slashMenu!.title,
-          description: slashMenu!.description,
-          icon: slashMenu!.icon,
-          keywords: slashMenu!.aliases,
-          group: slashMenu!.group || 'Custom',
+          title: slashMenu.title,
+          description: slashMenu.description,
+          icon: slashMenu.icon,
+          keywords: slashMenu.aliases,
+          group: slashMenu.group || 'Custom',
           action: (view) => {
             // Build default attrs from propSchema
             const attrs: Record<string, unknown> = {};

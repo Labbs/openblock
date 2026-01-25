@@ -264,10 +264,11 @@ export function createReactBlockSpec<T extends PropSchema>(
 
         // Append contentDOM after React renders if needed
         if (content === 'inline' && contentDOM) {
+          const dom = contentDOM; // Capture in closure
           requestAnimationFrame(() => {
             const contentContainer = contentRef.current;
-            if (contentContainer && !contentContainer.contains(contentDOM!)) {
-              contentContainer.appendChild(contentDOM!);
+            if (contentContainer && !contentContainer.contains(dom)) {
+              contentContainer.appendChild(dom);
             }
           });
         }

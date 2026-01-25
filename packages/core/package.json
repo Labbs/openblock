@@ -1,6 +1,6 @@
 {
   "name": "@labbs/openblock-core",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Framework-agnostic core for OpenBlock editor",
   "license": "Apache-2.0",
   "type": "module",
@@ -17,6 +17,18 @@
   },
   "files": [
     "dist"
+  ],
+  "keywords": [
+    "editor",
+    "rich-text",
+    "prosemirror",
+    "block-editor",
+    "wysiwyg",
+    "notion-like",
+    "typescript",
+    "text-editor",
+    "content-editor",
+    "document-editor"
   ],
   "scripts": {
     "build": "vite build && cp -r src/styles dist/",
@@ -55,5 +67,9 @@
     "type": "git",
     "url": "https://github.com/Labbs/openblock.git",
     "directory": "packages/core"
+  },
+  "homepage": "https://github.com/Labbs/openblock#readme",
+  "bugs": {
+    "url": "https://github.com/Labbs/openblock/issues"
   }
 }

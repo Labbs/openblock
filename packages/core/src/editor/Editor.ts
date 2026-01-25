@@ -886,10 +886,12 @@ export class OpenBlockEditor {
    * ```
    */
   on<K extends keyof EditorEvents>(event: K, handler: EventHandler<EditorEvents[K]>): () => void {
-    if (!this._listeners.has(event)) {
-      this._listeners.set(event, new Set());
+    let listeners = this._listeners.get(event);
+    if (!listeners) {
+      listeners = new Set();
+      this._listeners.set(event, listeners);
     }
-    this._listeners.get(event)!.add(handler as EventHandler<unknown>);
+    listeners.add(handler as EventHandler<unknown>);
     return () => this.off(event, handler);
   }
 

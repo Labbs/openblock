@@ -34,7 +34,7 @@ export const imageNode: NodeSpec = {
           src: img?.getAttribute('src') || '',
           alt: img?.getAttribute('alt') || '',
           caption: element.querySelector('figcaption')?.textContent || '',
-          width: img?.getAttribute('data-width') ? parseInt(img.getAttribute('data-width')!) : null,
+          width: img?.getAttribute('data-width') ? parseInt(img.getAttribute('data-width') ?? '0') : null,
           alignment: element.getAttribute('data-alignment') || 'center',
         };
       },

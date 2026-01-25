@@ -276,7 +276,7 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
   }
 
   // Cache for block positions to avoid repeated doc.descendants calls
-  let blockPosCache: Map<string, number> = new Map();
+  const blockPosCache: Map<string, number> = new Map();
   let lastDocVersion: number = -1;
 
   /**

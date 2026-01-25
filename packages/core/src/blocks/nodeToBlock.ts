@@ -62,28 +62,31 @@ export function nodeToBlock(node: PMNode): Block {
       }
       // If there are nested lists or other blocks, add as children
       if (node.childCount > 1) {
-        block.children = [];
+        const children: Block[] = [];
         node.forEach((child, _offset, index) => {
           if (index > 0) {
-            block.children!.push(nodeToBlock(child));
+            children.push(nodeToBlock(child));
           }
         });
+        block.children = children;
       }
     } else if (node.type.name === 'checkListItem') {
       // Check list items have inline content directly (not wrapped in paragraph)
       block.content = nodeContentToInline(node);
     } else if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
       // Table cells: all block children become children
-      block.children = [];
+      const cellChildren: Block[] = [];
       node.forEach((child) => {
-        block.children!.push(nodeToBlock(child));
+        cellChildren.push(nodeToBlock(child));
       });
+      block.children = cellChildren;
     } else {
       // Lists, tables, tableRows: all children become block children
-      block.children = [];
+      const blockChildren: Block[] = [];
       node.forEach((child) => {
-        block.children!.push(nodeToBlock(child));
+        blockChildren.push(nodeToBlock(child));
       });
+      block.children = blockChildren;
     }
     return block;
   }

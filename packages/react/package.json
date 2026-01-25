@@ -1,6 +1,6 @@
 {
   "name": "@labbs/openblock-react",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "React bindings for OpenBlock editor",
   "license": "Apache-2.0",
   "type": "module",
@@ -15,6 +15,18 @@
   },
   "files": [
     "dist"
+  ],
+  "keywords": [
+    "editor",
+    "rich-text",
+    "prosemirror",
+    "block-editor",
+    "wysiwyg",
+    "notion-like",
+    "react",
+    "react-hooks",
+    "typescript",
+    "text-editor"
   ],
   "scripts": {
     "build": "vite build",
@@ -44,5 +56,9 @@
     "type": "git",
     "url": "https://github.com/Labbs/openblock.git",
     "directory": "packages/react"
+  },
+  "homepage": "https://github.com/Labbs/openblock#readme",
+  "bugs": {
+    "url": "https://github.com/Labbs/openblock/issues"
   }
 }

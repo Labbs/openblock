@@ -1,12 +1,12 @@
 /**
- * @openblock/core
+ * @labbs/openblock-core
  *
  * A fully open-source, framework-agnostic rich text editor built on ProseMirror.
  * All APIs are PUBLIC - this is a core principle of OpenBlock.
  *
  * @example
  * ```typescript
- * import { OpenBlockEditor } from '@openblock/core';
+ * import { OpenBlockEditor } from '@labbs/openblock-core';
  *
  * const editor = new OpenBlockEditor({
  *   element: document.getElementById('editor'),

@@ -1,12 +1,11 @@
 /**
- * @openblock/react
+ * @labbs/openblock-react
  *
  * React bindings for OpenBlock editor.
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView } from '@openblock/react';
- * import '@labbs/openblock-core/styles/editor.css';
+ * import { useOpenBlock, OpenBlockView } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock({

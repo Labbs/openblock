@@ -6,12 +6,20 @@
  * @module
  */
 
-import { Plugin } from 'prosemirror-state';
+import { Plugin, EditorState, Transaction } from 'prosemirror-state';
 import { keymap } from 'prosemirror-keymap';
 import { Schema } from 'prosemirror-model';
 import { toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-commands';
 import { wrapInList, liftListItem, sinkListItem } from 'prosemirror-schema-list';
 import { undo, redo } from 'prosemirror-history';
+import { EditorView } from 'prosemirror-view';
+
+/** ProseMirror command type */
+type PMCommand = (
+  state: EditorState,
+  dispatch?: (tr: Transaction) => void,
+  view?: EditorView
+) => boolean;
 
 /**
  * A keyboard shortcut definition.
@@ -22,7 +30,7 @@ export interface KeyboardShortcut {
   /** Description of what the shortcut does */
   description: string;
   /** The action to perform - either a mark name, block type, or custom command */
-  action: string | ((state: any, dispatch?: any, view?: any) => boolean);
+  action: string | PMCommand;
 }
 
 /**
@@ -33,7 +41,7 @@ export interface KeyboardShortcutsConfig {
    * Custom shortcuts to add or override defaults.
    * Key is the shortcut (e.g., 'Mod-b'), value is the action.
    */
-  shortcuts?: Record<string, string | ((state: any, dispatch?: any, view?: any) => boolean)>;
+  shortcuts?: Record<string, string | PMCommand>;
 
   /**
    * Whether to include default formatting shortcuts.
@@ -92,7 +100,7 @@ export function createKeyboardShortcutsPlugin(
 ): Plugin {
   const { shortcuts = {}, includeDefaults = true, disabledShortcuts = [] } = config;
 
-  const keymapObj: Record<string, (state: any, dispatch?: any, view?: any) => boolean> = {};
+  const keymapObj: Record<string, PMCommand> = {};
 
   // Add default shortcuts if enabled
   if (includeDefaults) {
@@ -126,8 +134,8 @@ export function createKeyboardShortcutsPlugin(
  */
 function resolveAction(
   schema: Schema,
-  action: string | ((state: any, dispatch?: any, view?: any) => boolean)
-): ((state: any, dispatch?: any, view?: any) => boolean) | null {
+  action: string | PMCommand
+): PMCommand | null {
   if (typeof action === 'function') {
     return action;
   }

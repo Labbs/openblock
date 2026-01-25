@@ -40,7 +40,7 @@ export const orderedListNode: NodeSpec = {
       tag: 'ol',
       getAttrs(node) {
         const ol = node as HTMLElement;
-        return { start: ol.hasAttribute('start') ? parseInt(ol.getAttribute('start')!, 10) : 1 };
+        return { start: ol.hasAttribute('start') ? parseInt(ol.getAttribute('start') ?? '1', 10) : 1 };
       },
     },
   ],

@@ -385,7 +385,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
           schema.nodes.paragraph.create()
         );
         const list = schema.nodes.bulletList.create(null, item);
-        view.dispatch(view.state.tr.replaceSelectionWith(list));
+        replaceCurrentBlock(view, list);
       },
     });
   }
@@ -404,7 +404,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
           schema.nodes.paragraph.create()
         );
         const list = schema.nodes.orderedList.create(null, item);
-        view.dispatch(view.state.tr.replaceSelectionWith(list));
+        replaceCurrentBlock(view, list);
       },
     });
   }
@@ -697,7 +697,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
       action: (view) => {
         const item = schema.nodes.checkListItem.create({ checked: false });
         const list = schema.nodes.checkList.create(null, [item]);
-        view.dispatch(view.state.tr.replaceSelectionWith(list));
+        replaceCurrentBlock(view, list);
       },
     });
   }

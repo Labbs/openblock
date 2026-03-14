@@ -202,6 +202,10 @@ const EDITOR_STYLES = `
   margin: 0.25em 0;
 }
 
+.openblock-editor li::marker {
+  line-height: 1.5em;
+}
+
 .openblock-editor li > p {
   margin: 0;
 }
@@ -1490,7 +1494,7 @@ th .ob-side-menu,
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  margin-top: 0.2em;
+  height: 1.5em;
 }
 
 .openblock-checklist-checkbox {

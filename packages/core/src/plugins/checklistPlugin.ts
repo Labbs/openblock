@@ -89,16 +89,8 @@ export function createChecklistPlugin(config: ChecklistPluginConfig = {}): Plugi
 
               // Find the new position after the checklist (after deletion, positions shift)
               const newCheckListPos = tr.mapping.map(checkListPos);
-              const $newPos = tr.doc.resolve(newCheckListPos);
-              let newCheckListEndPos = newCheckListPos;
-
-              // Find the actual checkList node and its end position
-              for (let d = $newPos.depth; d >= 0; d--) {
-                if ($newPos.node(d).type.name === 'checkList') {
-                  newCheckListEndPos = $newPos.after(d);
-                  break;
-                }
-              }
+              const checkListNode = tr.doc.nodeAt(newCheckListPos);
+              const newCheckListEndPos = newCheckListPos + (checkListNode ? checkListNode.nodeSize : 0);
 
               // Insert a paragraph after the checklist
               const paragraph = state.schema.nodes.paragraph.create();

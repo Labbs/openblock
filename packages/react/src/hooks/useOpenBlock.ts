@@ -69,14 +69,11 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
     }
 
     // Build nodeViews from custom blocks
-    // We use a closure that references editorRef so nodeViews can access the editor
     const nodeViews: Record<string, NodeViewConstructor> = {};
 
     if (customBlocks && customBlocks.length > 0) {
       for (const blockSpec of customBlocks) {
-        // Create a wrapper that will use the editor from the ref
         nodeViews[blockSpec.type] = (node, view, getPos, decorations, innerDecorations) => {
-          // editorRef.current will be set by the time this is called
           const editor = editorRef.current;
           if (!editor) {
             throw new Error('Editor not initialized');
@@ -87,24 +84,31 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
       }
     }
 
-    // Merge with existing prosemirror config
-    const prosemirrorConfig = {
-      ...editorOptions.prosemirror,
-      nodeViews: {
-        ...editorOptions.prosemirror?.nodeViews,
-        ...nodeViews,
-      },
-    };
+    const hasNodeViews = Object.keys(nodeViews).length > 0;
 
-    // Create the editor with nodeViews and customNodes
+    // Create editor WITHOUT nodeViews first to avoid the race condition:
+    // ProseMirror calls nodeView constructors during EditorView construction,
+    // but editorRef.current isn't set yet, causing a crash when initialContent
+    // contains custom blocks.
     const newEditor = new OpenBlockEditor({
       ...editorOptions,
       customNodes: Object.keys(customNodes).length > 0 ? customNodes : undefined,
-      prosemirror: Object.keys(nodeViews).length > 0 ? prosemirrorConfig : editorOptions.prosemirror,
+      prosemirror: editorOptions.prosemirror,
     });
 
-    // Store in ref so nodeViews can access it
+    // Now the ref is available for nodeView callbacks
     editorRef.current = newEditor;
+
+    // Apply nodeViews after construction — ProseMirror will re-render
+    // all nodes that need a custom nodeView
+    if (hasNodeViews) {
+      newEditor.pm.view.setProps({
+        nodeViews: {
+          ...editorOptions.prosemirror?.nodeViews,
+          ...nodeViews,
+        },
+      });
+    }
     setEditor(newEditor);
 
     return () => {

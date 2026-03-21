@@ -60,6 +60,14 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
   useEffect(() => {
     const { customBlocks, ...editorOptions } = optionsRef.current;
 
+    // Build customNodes from custom block specs
+    const customNodes: Record<string, import('prosemirror-model').NodeSpec> = {};
+    if (customBlocks && customBlocks.length > 0) {
+      for (const blockSpec of customBlocks) {
+        customNodes[blockSpec.type] = blockSpec.nodeSpec;
+      }
+    }
+
     // Build nodeViews from custom blocks
     // We use a closure that references editorRef so nodeViews can access the editor
     const nodeViews: Record<string, NodeViewConstructor> = {};
@@ -88,9 +96,10 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
       },
     };
 
-    // Create the editor with nodeViews
+    // Create the editor with nodeViews and customNodes
     const newEditor = new OpenBlockEditor({
       ...editorOptions,
+      customNodes: Object.keys(customNodes).length > 0 ? customNodes : undefined,
       prosemirror: Object.keys(nodeViews).length > 0 ? prosemirrorConfig : editorOptions.prosemirror,
     });
 

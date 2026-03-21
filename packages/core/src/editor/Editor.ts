@@ -82,7 +82,7 @@ export class OpenBlockEditor {
       injectStyles();
     }
 
-    this._schema = createSchema();
+    this._schema = createSchema(this._config.customNodes);
     this._createEditor();
 
     if (this._config.autoFocus) {

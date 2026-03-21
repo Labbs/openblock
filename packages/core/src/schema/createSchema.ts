@@ -6,7 +6,7 @@
  * @module
  */
 
-import { Schema } from 'prosemirror-model';
+import { Schema, NodeSpec } from 'prosemirror-model';
 
 import {
   docNode,
@@ -105,9 +105,9 @@ export const DEFAULT_MARKS = {
  *
  * @returns A ProseMirror Schema instance
  */
-export function createSchema(): Schema {
+export function createSchema(customNodes?: Record<string, NodeSpec>): Schema {
   return new Schema({
-    nodes: DEFAULT_NODES,
+    nodes: { ...DEFAULT_NODES, ...customNodes },
     marks: DEFAULT_MARKS,
   });
 }

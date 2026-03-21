@@ -8,6 +8,7 @@
 
 import type { Plugin } from 'prosemirror-state';
 import type { NodeViewConstructor } from 'prosemirror-view';
+import type { NodeSpec } from 'prosemirror-model';
 import type { Block } from '../blocks/types';
 import type { InputRulesConfig } from '../plugins/inputRules';
 
@@ -118,6 +119,12 @@ export interface EditorConfig {
    * @default true
    */
   injectStyles?: boolean;
+
+  /**
+   * Custom node specifications to add to the schema.
+   * Keys are node type names, values are ProseMirror NodeSpec objects.
+   */
+  customNodes?: Record<string, NodeSpec>;
 
   /**
    * Direct ProseMirror configuration.

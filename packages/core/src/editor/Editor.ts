@@ -23,12 +23,13 @@
  */
 
 import { EditorView } from 'prosemirror-view';
-import { EditorState, Transaction } from 'prosemirror-state';
+import { EditorState, Transaction, Plugin } from 'prosemirror-state';
 import { Schema } from 'prosemirror-model';
+import { history as createHistoryPlugin } from 'prosemirror-history';
 import { v4 as uuid } from 'uuid';
 
 import { ProseMirrorAPI } from '../pm/ProseMirrorAPI';
-import { EditorConfig, defaultConfig, EditorEvents, EventHandler } from './EditorConfig';
+import { EditorConfig, defaultConfig, EditorEvents, EventHandler, CollaborationConfig } from './EditorConfig';
 import { createSchema } from '../schema';
 import { createPlugins, undo, redo } from '../plugins';
 import { injectStyles } from '../styles/injectStyles';
@@ -70,6 +71,15 @@ export class OpenBlockEditor {
   /** Event listeners */
   private _listeners: Map<keyof EditorEvents, Set<EventHandler<unknown>>> = new Map();
 
+  /** Whether the built-in history plugin is currently active */
+  private _historyEnabled = true;
+
+  /** Reference to the history plugin instance for dynamic toggling */
+  private _historyPlugin: Plugin | null = null;
+
+  /** Collaboration plugins currently active */
+  private _collaborationPlugins: Plugin[] = [];
+
   /** Destroyed flag */
   private _destroyed = false;
 
@@ -96,11 +106,20 @@ export class OpenBlockEditor {
 
   private _createEditor(): void {
     const doc = blocksToDoc(this._schema, this._config.initialContent);
+    this._historyEnabled = this._config.history !== false;
+
+    // Create the history plugin separately so we can toggle it at runtime
+    this._historyPlugin = this._historyEnabled ? createHistoryPlugin() : null;
+
     const plugins = createPlugins({
       schema: this._schema,
       toggleMark: (name) => this.pm.toggleMark(name),
       inputRules: this._config.inputRules,
-      additionalPlugins: this._config.prosemirror?.plugins,
+      history: false, // We manage history ourselves
+      additionalPlugins: [
+        ...(this._historyPlugin ? [this._historyPlugin] : []),
+        ...(this._config.prosemirror?.plugins ?? []),
+      ],
     });
 
     const state = EditorState.create({ doc, schema: this._schema, plugins });
@@ -344,6 +363,137 @@ export class OpenBlockEditor {
    */
   redo(): boolean {
     return redo(this._pmView.state, this._pmView.dispatch);
+  }
+
+  /**
+   * Whether the history (undo/redo) plugin is currently enabled.
+   */
+  get isHistoryEnabled(): boolean {
+    return this._historyEnabled;
+  }
+
+  /**
+   * Disable the history plugin at runtime.
+   *
+   * This is required when using y.js collaboration, as y-prosemirror
+   * provides its own undo manager that conflicts with prosemirror-history.
+   * The editor is reconfigured in place — no reload needed.
+   *
+   * @example
+   * ```typescript
+   * editor.disableHistory();
+   * ```
+   */
+  disableHistory(): void {
+    if (!this._historyEnabled || !this._historyPlugin) return;
+    this._historyEnabled = false;
+
+    const plugins = this._pmView.state.plugins.filter(p => p !== this._historyPlugin);
+    const newState = this._pmView.state.reconfigure({ plugins });
+    this._pmView.updateState(newState);
+  }
+
+  /**
+   * Re-enable the history plugin at runtime.
+   *
+   * Restores the prosemirror-history plugin after it was disabled.
+   * A fresh history plugin is created (previous undo stack is lost).
+   *
+   * @example
+   * ```typescript
+   * editor.enableHistory();
+   * ```
+   */
+  enableHistory(): void {
+    if (this._historyEnabled) return;
+    this._historyEnabled = true;
+
+    // Create a fresh history plugin (old undo stack is gone)
+    this._historyPlugin = createHistoryPlugin();
+
+    const plugins = [this._historyPlugin, ...this._pmView.state.plugins];
+    const newState = this._pmView.state.reconfigure({ plugins });
+    this._pmView.updateState(newState);
+  }
+
+  // ===========================================================================
+  // COLLABORATION (Y.js)
+  // ===========================================================================
+
+  /**
+   * Whether collaboration is currently enabled.
+   */
+  get isCollaborating(): boolean {
+    return this._collaborationPlugins.length > 0;
+  }
+
+  /**
+   * Enable real-time collaboration using y.js.
+   *
+   * This automatically disables the built-in history plugin
+   * (y-prosemirror provides its own undo manager).
+   * The editor is reconfigured in place — no reload needed.
+   *
+   * @param config - Collaboration configuration with y-prosemirror plugins
+   *
+   * @example
+   * ```typescript
+   * import * as Y from 'yjs';
+   * import { WebsocketProvider } from 'y-websocket';
+   * import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
+   *
+   * const ydoc = new Y.Doc();
+   * const provider = new WebsocketProvider('ws://localhost:1234', 'room', ydoc);
+   * const fragment = ydoc.getXmlFragment('prosemirror');
+   *
+   * editor.enableCollaboration({
+   *   plugins: [
+   *     ySyncPlugin(fragment),
+   *     yCursorPlugin(provider.awareness),
+   *     yUndoPlugin(),
+   *   ],
+   * });
+   * ```
+   */
+  enableCollaboration(config: CollaborationConfig): void {
+    if (this._collaborationPlugins.length > 0) {
+      this.disableCollaboration();
+    }
+
+    // Disable history — y-prosemirror has its own undo manager
+    this.disableHistory();
+
+    // Store and add collaboration plugins
+    this._collaborationPlugins = [...config.plugins];
+
+    const plugins = [...this._collaborationPlugins, ...this._pmView.state.plugins];
+    const newState = this._pmView.state.reconfigure({ plugins });
+    this._pmView.updateState(newState);
+  }
+
+  /**
+   * Disable real-time collaboration.
+   *
+   * Removes all collaboration plugins and re-enables the built-in
+   * history plugin. The editor is reconfigured in place — no reload needed.
+   *
+   * @example
+   * ```typescript
+   * editor.disableCollaboration();
+   * ```
+   */
+  disableCollaboration(): void {
+    if (this._collaborationPlugins.length === 0) return;
+
+    const collabSet = new Set(this._collaborationPlugins);
+    const plugins = this._pmView.state.plugins.filter(p => !collabSet.has(p));
+    this._collaborationPlugins = [];
+
+    const newState = this._pmView.state.reconfigure({ plugins });
+    this._pmView.updateState(newState);
+
+    // Re-enable built-in history
+    this.enableHistory();
   }
 
   // ===========================================================================

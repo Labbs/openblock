@@ -35,7 +35,7 @@ OpenBlock includes these plugins by default:
 
 | Plugin | Description |
 |--------|-------------|
-| `history` | Undo/redo support |
+| `history` | Undo/redo support (can be disabled at runtime for y.js) |
 | `keymap` | Keyboard shortcuts |
 | `inputRules` | Markdown-style shortcuts |
 | `dropCursor` | Visual cursor when dragging |
@@ -45,6 +45,22 @@ OpenBlock includes these plugins by default:
 | `bubbleMenuPlugin` | Formatting toolbar |
 | `dragDropPlugin` | Block drag and drop |
 | `tablePlugin` | Table functionality |
+
+### Disabling the History Plugin
+
+The `history` plugin can be disabled at initialization or toggled at runtime. This is required when using Y.js collaboration, as `y-prosemirror` provides its own undo manager.
+
+```typescript
+// Disable at initialization
+const editor = new OpenBlockEditor({ history: false });
+
+// Or toggle at runtime (no reload needed)
+editor.disableHistory();
+editor.enableHistory();
+editor.isHistoryEnabled; // boolean
+```
+
+See the [Collaboration guide](./collaboration.md) for full details on using Y.js with OpenBlock.
 
 ## Creating a Simple Plugin
 

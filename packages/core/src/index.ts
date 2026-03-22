@@ -30,7 +30,7 @@
 // ===========================================================================
 
 export { OpenBlockEditor, defaultConfig } from './editor';
-export type { EditorConfig, EditorEvents, EventHandler } from './editor';
+export type { EditorConfig, EditorEvents, EventHandler, CollaborationConfig } from './editor';
 
 // ===========================================================================
 // PROSEMIRROR API - THE KEY DIFFERENTIATOR

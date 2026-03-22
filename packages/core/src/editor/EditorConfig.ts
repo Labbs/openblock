@@ -13,6 +13,30 @@ import type { Block } from '../blocks/types';
 import type { InputRulesConfig } from '../plugins/inputRules';
 
 /**
+ * Configuration for enabling real-time collaboration.
+ *
+ * @example
+ * ```typescript
+ * import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
+ *
+ * const config: CollaborationConfig = {
+ *   plugins: [
+ *     ySyncPlugin(fragment),
+ *     yCursorPlugin(awareness),
+ *     yUndoPlugin(),
+ *   ],
+ * };
+ * ```
+ */
+export interface CollaborationConfig {
+  /**
+   * ProseMirror plugins for collaboration (e.g., from y-prosemirror).
+   * Typically includes ySyncPlugin, yCursorPlugin, and yUndoPlugin.
+   */
+  plugins: Plugin[];
+}
+
+/**
  * Editor event types.
  */
 export interface EditorEvents {
@@ -81,6 +105,14 @@ export interface EditorConfig {
    * Can be a string or a function that returns a string based on the block.
    */
   placeholder?: string | ((block: Block) => string);
+
+  /**
+   * Whether to include the history (undo/redo) plugin.
+   * Set to false to disable history at initialization (e.g., when using y.js).
+   * Can also be toggled at runtime via editor.enableHistory() / editor.disableHistory().
+   * @default true
+   */
+  history?: boolean;
 
   /**
    * Configuration for input rules (markdown-style shortcuts).

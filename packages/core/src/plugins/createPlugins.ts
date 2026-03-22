@@ -40,6 +40,14 @@ export interface CreatePluginsOptions {
   toggleMark?: (markName: string) => boolean;
 
   /**
+   * Whether to include the history (undo/redo) plugin.
+   * Set to false to disable history (e.g., when using y.js collaboration).
+   * Can be toggled at runtime via editor.enableHistory() / editor.disableHistory().
+   * @default true
+   */
+  history?: boolean;
+
+  /**
    * Configuration for input rules (markdown shortcuts).
    * Set to false to disable all input rules.
    * @default true (all rules enabled)
@@ -140,6 +148,7 @@ export interface CreatePluginsOptions {
  */
 export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
   const { schema, toggleMark, inputRules, dragDrop, slashMenu, bubbleMenu, multiBlockSelection, table, keyboardShortcuts, checklist, mediaMenu, additionalPlugins = [] } = options;
+  const includeHistory = options.history !== false;
 
   // Create slash menu plugin early so we can add it before baseKeymap
   const slashMenuPlugin = slashMenu !== false
@@ -147,8 +156,8 @@ export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
     : null;
 
   const plugins: Plugin[] = [
-    // History for undo/redo
-    history(),
+    // History for undo/redo (can be disabled for y.js collaboration)
+    ...(includeHistory ? [history()] : []),
 
     // Slash menu plugin must come before baseKeymap to handle Enter when menu is active
     ...(slashMenuPlugin ? [slashMenuPlugin] : []),

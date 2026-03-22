@@ -121,6 +121,18 @@ editor.hasFocus: boolean
 editor.toJSON(): Block[]
 editor.fromJSON(blocks): void
 
+// History (undo/redo)
+editor.undo(): boolean
+editor.redo(): boolean
+editor.enableHistory(): void
+editor.disableHistory(): void
+editor.isHistoryEnabled: boolean
+
+// Collaboration (Y.js)
+editor.enableCollaboration({ plugins }): void
+editor.disableCollaboration(): void
+editor.isCollaborating: boolean
+
 // Lifecycle
 editor.mount(element): void
 editor.destroy(): void
@@ -138,6 +150,34 @@ editor.off(event, handler): void
 Public access to all ProseMirror functionality via `editor.pm`.
 
 See [ProseMirrorAPI.ts](src/pm/ProseMirrorAPI.ts) for the full API.
+
+## Real-Time Collaboration
+
+OpenBlock supports real-time collaboration via Y.js. Enable and disable it at runtime without reloading the page:
+
+```typescript
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
+
+const ydoc = new Y.Doc();
+const provider = new WebsocketProvider('ws://localhost:1234', 'room', ydoc);
+const fragment = ydoc.getXmlFragment('prosemirror');
+
+// Enable (auto-disables prosemirror-history)
+editor.enableCollaboration({
+  plugins: [
+    ySyncPlugin(fragment),
+    yCursorPlugin(provider.awareness),
+    yUndoPlugin(),
+  ],
+});
+
+// Disable (auto-restores prosemirror-history)
+editor.disableCollaboration();
+```
+
+See the [Collaboration guide](../../docs/collaboration.md) for full documentation.
 
 ## License
 

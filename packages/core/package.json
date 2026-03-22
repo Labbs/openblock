@@ -56,7 +56,14 @@
     "vite": "^6.0.7",
     "vite-plugin-dts": "^4.4.0"
   },
-  "peerDependencies": {},
+  "peerDependencies": {
+    "yjs": "^13.0.0",
+    "y-prosemirror": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "yjs": { "optional": true },
+    "y-prosemirror": { "optional": true }
+  },
   "sideEffects": [
     "*.css"
   ],

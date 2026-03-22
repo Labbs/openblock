@@ -6,4 +6,4 @@
 
 export { OpenBlockEditor } from './Editor';
 export { defaultConfig } from './EditorConfig';
-export type { EditorConfig, EditorEvents, EventHandler } from './EditorConfig';
+export type { EditorConfig, EditorEvents, EventHandler, CollaborationConfig } from './EditorConfig';

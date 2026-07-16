@@ -8,6 +8,9 @@
 
 import type { NodeSpec } from 'prosemirror-model';
 
+import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+import { sanitizeImageSrc } from '../sanitizeUrl';
+
 export type ImageAlignment = 'left' | 'center' | 'right';
 
 export const imageNode: NodeSpec = {
@@ -30,11 +33,12 @@ export const imageNode: NodeSpec = {
         const element = dom as HTMLElement;
         const img = element.querySelector('img');
         return {
-          id: element.getAttribute('data-block-id'),
-          src: img?.getAttribute('src') || '',
+          ...getBlockIdAttrs(element),
+          // Unsafe srcs (e.g. javascript:) are dropped - placeholder is shown
+          src: sanitizeImageSrc(img?.getAttribute('src')) ?? '',
           alt: img?.getAttribute('alt') || '',
           caption: element.querySelector('figcaption')?.textContent || '',
-          width: img?.getAttribute('data-width') ? parseInt(img.getAttribute('data-width') ?? '0') : null,
+          width: safeParseInt(img?.getAttribute('data-width'), null),
           alignment: element.getAttribute('data-alignment') || 'center',
         };
       },
@@ -43,8 +47,11 @@ export const imageNode: NodeSpec = {
       tag: 'img[src]',
       getAttrs: (dom) => {
         const element = dom as HTMLImageElement;
+        const src = sanitizeImageSrc(element.getAttribute('src'));
+        // Reject standalone images with unsafe srcs entirely
+        if (src === null) return false;
         return {
-          src: element.getAttribute('src') || '',
+          src,
           alt: element.getAttribute('alt') || '',
           width: element.width || null,
         };
@@ -52,15 +59,17 @@ export const imageNode: NodeSpec = {
     },
   ],
   toDOM: (node) => {
-    const { src, alt, caption, width, alignment, id } = node.attrs;
+    const { alt, caption, width, alignment } = node.attrs;
+    // Attrs can come from JSON (not only parseDOM), so re-validate here.
+    const src = sanitizeImageSrc(node.attrs.src) ?? '';
 
     const figureAttrs: Record<string, string> = {
       class: `openblock-image openblock-image--${alignment}`,
-      'data-block-id': id || '',
+      ...blockIdToDOM(node),
       'data-alignment': alignment,
     };
 
-    // If no src, show a placeholder
+    // If no (safe) src, show a placeholder
     if (!src) {
       const placeholderDiv = [
         'div',

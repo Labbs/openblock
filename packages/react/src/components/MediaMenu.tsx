@@ -30,6 +30,9 @@ import {
   ImageAttrs,
   EmbedAttrs,
 } from '@labbs/openblock-core';
+import { usePluginState } from '../hooks/usePluginState';
+import { useClickOutside } from '../hooks/useClickOutside';
+import { LinkIcon } from './icons';
 
 /**
  * Props for MediaMenu component.
@@ -71,17 +74,32 @@ function AlignmentButton({ active, onClick, title, children }: AlignmentButtonPr
 }
 
 /**
- * URL edit popover component.
+ * Small popover with a single text input, used for both URL and caption editing.
  */
-interface UrlEditPopoverProps {
-  currentUrl: string;
-  onSave: (url: string) => void;
-  onClose: () => void;
+interface TextInputPopoverProps {
+  /** Label displayed above the input. */
   label: string;
+  /** Initial value of the input. */
+  initialValue: string;
+  /** HTML input type. */
+  inputType?: 'url' | 'text';
+  /** Placeholder text. */
+  placeholder?: string;
+  /** Called with the input value when the form is submitted. */
+  onSave: (value: string) => void;
+  /** Called when the popover should close (Cancel button or Escape). */
+  onClose: () => void;
 }
 
-function UrlEditPopover({ currentUrl, onSave, onClose, label }: UrlEditPopoverProps) {
-  const [url, setUrl] = useState(currentUrl);
+function TextInputPopover({
+  label,
+  initialValue,
+  inputType = 'text',
+  placeholder,
+  onSave,
+  onClose,
+}: TextInputPopoverProps) {
+  const [value, setValue] = useState(initialValue);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -91,7 +109,7 @@ function UrlEditPopover({ currentUrl, onSave, onClose, label }: UrlEditPopoverPr
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(url);
+    onSave(value);
     onClose();
   };
 
@@ -111,74 +129,11 @@ function UrlEditPopover({ currentUrl, onSave, onClose, label }: UrlEditPopoverPr
         <label className="ob-media-url-label">{label}</label>
         <input
           ref={inputRef}
-          type="url"
+          type={inputType}
           className="ob-media-url-input"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://..."
-        />
-        <div className="ob-media-url-actions">
-          <button
-            type="button"
-            className="ob-media-url-btn ob-media-url-btn--cancel"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          <button type="submit" className="ob-media-url-btn ob-media-url-btn--save">
-            Save
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-/**
- * Caption edit popover component.
- */
-interface CaptionEditPopoverProps {
-  currentCaption: string;
-  onSave: (caption: string) => void;
-  onClose: () => void;
-}
-
-function CaptionEditPopover({ currentCaption, onSave, onClose }: CaptionEditPopoverProps) {
-  const [caption, setCaption] = useState(currentCaption);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(caption);
-    onClose();
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
-
-  return (
-    <div
-      className="ob-media-url-popover"
-      onKeyDown={handleKeyDown}
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <form onSubmit={handleSubmit}>
-        <label className="ob-media-url-label">Caption</label>
-        <input
-          ref={inputRef}
-          type="text"
-          className="ob-media-url-input"
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          placeholder="Enter caption..."
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
         />
         <div className="ob-media-url-actions">
           <button
@@ -203,41 +158,21 @@ function CaptionEditPopover({ currentCaption, onSave, onClose }: CaptionEditPopo
  * Renders a floating toolbar when an image or embed is selected.
  */
 export function MediaMenu({ editor, className }: MediaMenuProps): React.ReactElement | null {
-  const [menuState, setMenuState] = useState<MediaMenuState | null>(null);
+  const menuState = usePluginState(editor, MEDIA_MENU_PLUGIN_KEY);
   const [showUrlEdit, setShowUrlEdit] = useState(false);
   const [showCaptionEdit, setShowCaptionEdit] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   // Keep a stable reference to the last valid menu state for when popovers are open
   const lastValidStateRef = useRef<MediaMenuState | null>(null);
 
-  useEffect(() => {
-    if (!editor || editor.isDestroyed) return;
+  const isPopoverOpen = showUrlEdit || showCaptionEdit;
 
-    const updateState = () => {
-      const state = MEDIA_MENU_PLUGIN_KEY.getState(editor.pm.state);
-      // Only update if menu is visible, or if no popover is open
-      if (state?.visible) {
-        lastValidStateRef.current = state;
-        setMenuState(state);
-      } else if (!showUrlEdit && !showCaptionEdit) {
-        lastValidStateRef.current = null;
-        setMenuState(state ?? null);
-      }
-      // If a popover is open, keep the last valid state
-    };
-
-    updateState();
-
-    const unsubscribe = editor.on('transaction', updateState);
-    return unsubscribe;
-  }, [editor, showUrlEdit, showCaptionEdit]);
-
-  // Close popovers when menu truly hides (not when popover is open)
-  useEffect(() => {
-    if (!menuState?.visible && !showUrlEdit && !showCaptionEdit) {
-      lastValidStateRef.current = null;
-    }
-  }, [menuState?.visible, showUrlEdit, showCaptionEdit]);
+  // Track the last visible state (so an open popover survives the menu
+  // hiding), and drop it as soon as the menu is hidden with no popover open.
+  if (menuState?.visible) {
+    lastValidStateRef.current = menuState;
+  } else if (!isPopoverOpen) {
+    lastValidStateRef.current = null;
+  }
 
   // Hide menu on scroll
   useEffect(() => {
@@ -263,85 +198,148 @@ export function MediaMenu({ editor, className }: MediaMenuProps): React.ReactEle
     };
   }, [editor, menuState?.visible]);
 
-  // Hide menu when clicking outside
-  useEffect(() => {
-    const isPopoverOpen = showUrlEdit || showCaptionEdit;
-    if (!editor || (!menuState?.visible && !isPopoverOpen)) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Don't hide if clicking inside the menu or popovers
-      if (target.closest('.ob-media-menu') || target.closest('.ob-media-url-popover')) {
-        return;
-      }
-      // Don't hide if clicking on the media element itself
-      if (target.closest('.openblock-image') || target.closest('.openblock-embed')) {
-        return;
-      }
-      // Close popovers and hide menu
+  // Close popovers when clicking outside the menu, the popovers,
+  // and the media element itself
+  useClickOutside(
+    [],
+    () => {
       setShowUrlEdit(false);
       setShowCaptionEdit(false);
       lastValidStateRef.current = null;
-    };
+    },
+    Boolean(editor && (menuState?.visible || isPopoverOpen)),
+    {
+      ignoreSelectors: [
+        '.ob-media-menu',
+        '.ob-media-url-popover',
+        '.openblock-image',
+        '.openblock-embed',
+      ],
+    }
+  );
 
-    // Use mousedown to catch clicks before focus changes
-    document.addEventListener('mousedown', handleClickOutside);
+  /**
+   * Re-resolve the media node position at action time: the captured nodePos
+   * may be stale if the document changed since the menu state was computed.
+   * Verifies the node at nodePos is the expected media node, otherwise finds
+   * it again by its id. Returns null when the node cannot be found.
+   */
+  const resolveMediaPos = useCallback(
+    (state: MediaMenuState): number | null => {
+      if (!editor || editor.isDestroyed) return null;
+      if (state.nodePos === null || !state.mediaType) return null;
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [editor, menuState?.visible, showUrlEdit, showCaptionEdit]);
+      const doc = editor.pm.state.doc;
+      const expectedType = state.mediaType;
+      const expectedId = (state.attrs as { id?: string | null } | null)?.id ?? null;
+
+      // Fast path: the node at the captured position is still the right one
+      if (state.nodePos >= 0 && state.nodePos < doc.content.size) {
+        const node = doc.nodeAt(state.nodePos);
+        if (
+          node &&
+          node.type.name === expectedType &&
+          (expectedId === null || node.attrs.id === expectedId)
+        ) {
+          return state.nodePos;
+        }
+      }
+
+      // Fallback: find the node again by its id
+      if (expectedId !== null) {
+        let found: number | null = null;
+        doc.descendants((node, pos) => {
+          if (found !== null) return false;
+          if (node.type.name === expectedType && node.attrs.id === expectedId) {
+            found = pos;
+            return false;
+          }
+          return true;
+        });
+        return found;
+      }
+
+      return null;
+    },
+    [editor]
+  );
 
   // Get the current state to use (prefer current, fallback to last valid)
   const getActiveState = useCallback(() => {
     return menuState?.visible ? menuState : lastValidStateRef.current;
   }, [menuState]);
 
+  /** Cleanly abort an action whose target node no longer exists. */
+  const cancelAction = useCallback(() => {
+    setShowUrlEdit(false);
+    setShowCaptionEdit(false);
+    lastValidStateRef.current = null;
+  }, []);
+
   const handleAlignmentChange = useCallback(
     (alignment: 'left' | 'center' | 'right') => {
       const state = getActiveState();
-      if (!editor || state?.nodePos === null || state?.nodePos === undefined) return;
-      updateMediaAttrs(editor.pm.view, state.nodePos, { alignment });
+      if (!editor || !state) return;
+      const pos = resolveMediaPos(state);
+      if (pos === null) {
+        cancelAction();
+        return;
+      }
+      updateMediaAttrs(editor.pm.view, pos, { alignment });
       editor.pm.view.focus();
     },
-    [editor, getActiveState]
+    [editor, getActiveState, resolveMediaPos, cancelAction]
   );
 
   const handleUrlSave = useCallback(
     (url: string) => {
       const state = getActiveState();
-      if (!editor || state?.nodePos === null || state?.nodePos === undefined) return;
+      if (!editor || !state) return;
+      const pos = resolveMediaPos(state);
+      if (pos === null) {
+        cancelAction();
+        return;
+      }
       if (state.mediaType === 'image') {
-        updateMediaAttrs(editor.pm.view, state.nodePos, { src: url });
+        updateMediaAttrs(editor.pm.view, pos, { src: url });
       } else {
-        updateMediaAttrs(editor.pm.view, state.nodePos, { url });
+        updateMediaAttrs(editor.pm.view, pos, { url });
       }
       setShowUrlEdit(false);
       editor.pm.view.focus();
     },
-    [editor, getActiveState]
+    [editor, getActiveState, resolveMediaPos, cancelAction]
   );
 
   const handleCaptionSave = useCallback(
     (caption: string) => {
       const state = getActiveState();
-      if (!editor || state?.nodePos === null || state?.nodePos === undefined) return;
-      updateMediaAttrs(editor.pm.view, state.nodePos, { caption });
+      if (!editor || !state) return;
+      const pos = resolveMediaPos(state);
+      if (pos === null) {
+        cancelAction();
+        return;
+      }
+      updateMediaAttrs(editor.pm.view, pos, { caption });
       setShowCaptionEdit(false);
       editor.pm.view.focus();
     },
-    [editor, getActiveState]
+    [editor, getActiveState, resolveMediaPos, cancelAction]
   );
 
   const handleDelete = useCallback(() => {
     const state = getActiveState();
-    if (!editor || state?.nodePos === null || state?.nodePos === undefined) return;
-    deleteMediaNode(editor.pm.view, state.nodePos);
+    if (!editor || !state) return;
+    const pos = resolveMediaPos(state);
+    if (pos === null) {
+      cancelAction();
+      return;
+    }
+    deleteMediaNode(editor.pm.view, pos);
     editor.pm.view.focus();
-  }, [editor, getActiveState]);
+  }, [editor, getActiveState, resolveMediaPos, cancelAction]);
 
   // Use the last valid state if a popover is open
-  const isPopoverOpen = showUrlEdit || showCaptionEdit;
   const activeState = menuState?.visible ? menuState : (isPopoverOpen ? lastValidStateRef.current : null);
 
   if (!editor || editor.isDestroyed || !activeState || !activeState.coords) {
@@ -368,7 +366,6 @@ export function MediaMenu({ editor, className }: MediaMenuProps): React.ReactEle
 
   return (
     <div
-      ref={menuRef}
       className={`ob-media-menu ${className || ''}`}
       style={style}
       role="toolbar"
@@ -421,10 +418,7 @@ export function MediaMenu({ editor, className }: MediaMenuProps): React.ReactEle
         onMouseDown={(e) => e.preventDefault()}
         title={isImage ? 'Edit image URL' : 'Edit embed URL'}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-        </svg>
+        <LinkIcon />
       </button>
 
       {/* Edit Caption button */}
@@ -463,18 +457,23 @@ export function MediaMenu({ editor, className }: MediaMenuProps): React.ReactEle
 
       {/* URL Edit Popover */}
       {showUrlEdit && (
-        <UrlEditPopover
-          currentUrl={currentUrl}
+        <TextInputPopover
+          label={isImage ? 'Image URL' : 'Embed URL'}
+          initialValue={currentUrl}
+          inputType="url"
+          placeholder="https://..."
           onSave={handleUrlSave}
           onClose={() => setShowUrlEdit(false)}
-          label={isImage ? 'Image URL' : 'Embed URL'}
         />
       )}
 
       {/* Caption Edit Popover */}
       {showCaptionEdit && (
-        <CaptionEditPopover
-          currentCaption={currentCaption}
+        <TextInputPopover
+          label="Caption"
+          initialValue={currentCaption}
+          inputType="text"
+          placeholder="Enter caption..."
           onSave={handleCaptionSave}
           onClose={() => setShowCaptionEdit(false)}
         />

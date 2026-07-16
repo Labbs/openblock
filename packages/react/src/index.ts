@@ -29,8 +29,10 @@ export {
   useEditorSelection,
   useEditorFocus,
   useCustomSlashMenuItems,
+  usePluginState,
+  useClickOutside,
 } from './hooks';
-export type { UseOpenBlockOptions } from './hooks';
+export type { UseOpenBlockOptions, UseClickOutsideOptions } from './hooks';
 
 // Components
 export {

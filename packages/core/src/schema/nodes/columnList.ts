@@ -20,6 +20,8 @@
 
 import { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+
 /**
  * ColumnList node spec for ProseMirror.
  *
@@ -42,11 +44,9 @@ export const columnListNode: NodeSpec = {
     {
       tag: 'div[data-column-list]',
       getAttrs(dom: HTMLElement): Record<string, unknown> {
-        const gap = dom.getAttribute('data-gap');
-        const id = dom.getAttribute('data-block-id');
         return {
-          id: id || null,
-          gap: gap ? parseInt(gap, 10) : 16,
+          ...getBlockIdAttrs(dom),
+          gap: safeParseInt(dom.getAttribute('data-gap'), 16),
         };
       },
     },
@@ -58,11 +58,8 @@ export const columnListNode: NodeSpec = {
       'data-gap': String(node.attrs.gap),
       class: 'ob-column-list',
       style: `gap: ${node.attrs.gap}px`,
+      ...blockIdToDOM(node),
     };
-
-    if (node.attrs.id) {
-      attrs['data-block-id'] = node.attrs.id;
-    }
 
     return ['div', attrs, 0];
   },

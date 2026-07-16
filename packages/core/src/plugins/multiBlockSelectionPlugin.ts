@@ -21,6 +21,8 @@ export interface MultiBlockSelectionState {
   selectedBlocks: number[];
   /** Anchor position for range selection */
   anchorPos: number | null;
+  /** Cached decorations for the selected blocks */
+  decorations: DecorationSet;
 }
 
 /**
@@ -32,26 +34,23 @@ export const MULTI_BLOCK_SELECTION_KEY = new PluginKey<MultiBlockSelectionState>
 
 /**
  * Get the block node and its position at a given document position.
+ *
+ * Note: only top-level blocks are handled (depth 1 = direct child of doc).
+ * A position inside a nested block (column, blockquote, list, ...) resolves
+ * to its top-level ancestor, not the nested block itself.
  */
 function getBlockAtPos(
   doc: PMNode,
   pos: number
 ): { node: PMNode; pos: number; depth: number } | null {
   const $pos = doc.resolve(pos);
+  if ($pos.depth < 1) return null;
 
-  // Walk up to find the top-level block (depth 1 = direct child of doc)
-  for (let depth = $pos.depth; depth >= 1; depth--) {
-    const node = $pos.node(depth);
-    if (node.isBlock && depth === 1) {
-      return {
-        node,
-        pos: $pos.before(depth),
-        depth,
-      };
-    }
-  }
-
-  return null;
+  return {
+    node: $pos.node(1),
+    pos: $pos.before(1),
+    depth: 1,
+  };
 }
 
 /**
@@ -142,6 +141,7 @@ export function createMultiBlockSelectionPlugin(
           active: false,
           selectedBlocks: [],
           anchorPos: null,
+          decorations: DecorationSet.empty,
         };
       },
 
@@ -149,7 +149,20 @@ export function createMultiBlockSelectionPlugin(
         // Check for meta to update state
         const meta = tr.getMeta(MULTI_BLOCK_SELECTION_KEY);
         if (meta) {
-          return meta;
+          const next: MultiBlockSelectionState = {
+            active: false,
+            selectedBlocks: [],
+            anchorPos: null,
+            ...meta,
+            decorations: DecorationSet.empty,
+          };
+          if (next.active && next.selectedBlocks.length > 0) {
+            next.decorations = createBlockSelectionDecorations(
+              newEditorState,
+              next.selectedBlocks
+            );
+          }
+          return next;
         }
 
         // If document changed, try to map positions
@@ -164,15 +177,14 @@ export function createMultiBlockSelectionPlugin(
             }
           }
 
-          if (mappedBlocks.length !== state.selectedBlocks.length) {
-            return {
-              ...state,
-              selectedBlocks: mappedBlocks,
-              active: mappedBlocks.length > 0,
-            };
-          }
-
-          return { ...state, selectedBlocks: mappedBlocks };
+          return {
+            ...state,
+            selectedBlocks: mappedBlocks,
+            active: mappedBlocks.length > 0,
+            // Map the cached decoration set through the changes instead of
+            // rebuilding it on every decorations() call
+            decorations: state.decorations.map(tr.mapping, tr.doc),
+          };
         }
 
         return state;
@@ -182,10 +194,10 @@ export function createMultiBlockSelectionPlugin(
     props: {
       decorations(state): DecorationSet {
         const pluginState = MULTI_BLOCK_SELECTION_KEY.getState(state);
-        if (!pluginState || !pluginState.active || pluginState.selectedBlocks.length === 0) {
+        if (!pluginState || !pluginState.active) {
           return DecorationSet.empty;
         }
-        return createBlockSelectionDecorations(state, pluginState.selectedBlocks);
+        return pluginState.decorations;
       },
 
       handleClick(view: EditorView, _pos: number, event: MouseEvent): boolean {
@@ -220,8 +232,11 @@ export function createMultiBlockSelectionPlugin(
           return true;
         }
 
-        // Cmd/Ctrl+A to select all blocks
-        if ((event.metaKey || event.ctrlKey) && event.key === 'a') {
+        // Cmd/Ctrl+A to select all blocks.
+        // Note: this plugin must be registered BEFORE keymap(baseKeymap)
+        // (see createPlugins.ts), otherwise baseKeymap's selectAll consumes
+        // the event first and this branch is unreachable.
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a') {
           // If already has text selection spanning whole doc, select all blocks
           const { from, to } = view.state.selection;
           const docSize = view.state.doc.content.size;

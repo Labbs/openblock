@@ -7,8 +7,14 @@
  * @module
  */
 
-import { Plugin, PluginKey, EditorState } from 'prosemirror-state';
+import { Plugin, PluginKey, EditorState, NodeSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
+import {
+  BlurHideHandle,
+  createBlurHideHandle,
+  disposeBlurHideHandle,
+  scheduleHideOnBlur,
+} from './menuHelpers';
 
 /**
  * Plugin key for accessing bubble menu state.
@@ -199,13 +205,13 @@ function shouldShowMenu(
   if (to - from < minSelectionLength) return false;
 
   // Check if it's a node selection (image, embed, etc.)
-  if (selection.constructor.name === 'NodeSelection') {
+  if (selection instanceof NodeSelection) {
     if (!showOnNodeSelection) {
       return false;
     }
     // Even if showOnNodeSelection is true, exclude media nodes (they have their own menu)
-    const node = (selection as { node?: { type?: { name?: string } } }).node;
-    if (node?.type?.name === 'image' || node?.type?.name === 'embed') {
+    const nodeName = selection.node.type.name;
+    if (nodeName === 'image' || nodeName === 'embed') {
       return false;
     }
   }
@@ -260,6 +266,10 @@ function shouldShowMenu(
  * @returns A ProseMirror plugin
  */
 export function createBubbleMenuPlugin(config: BubbleMenuConfig = {}): Plugin {
+  // Shared between the blur handler (props) and the plugin view lifecycle
+  // so pending hide timers never dispatch on a destroyed view.
+  const blurHandle: BlurHideHandle = createBlurHideHandle();
+
   return new Plugin<BubbleMenuState>({
     key: BUBBLE_MENU_PLUGIN_KEY,
 
@@ -330,6 +340,9 @@ export function createBubbleMenuPlugin(config: BubbleMenuConfig = {}): Plugin {
       let updateTimeout: ReturnType<typeof setTimeout> | null = null;
       const { showDelay = 0 } = config;
 
+      // A new view is alive again (the plugin instance may be reused)
+      blurHandle.destroyed = false;
+
       const updateCoords = () => {
         const state = BUBBLE_MENU_PLUGIN_KEY.getState(editorView.state);
         if (!state?.visible) return;
@@ -368,6 +381,7 @@ export function createBubbleMenuPlugin(config: BubbleMenuConfig = {}): Plugin {
 
         destroy() {
           if (updateTimeout) clearTimeout(updateTimeout);
+          disposeBlurHideHandle(blurHandle);
         },
       };
     },
@@ -378,20 +392,15 @@ export function createBubbleMenuPlugin(config: BubbleMenuConfig = {}): Plugin {
         blur(view) {
           const state = BUBBLE_MENU_PLUGIN_KEY.getState(view.state);
           if (state?.visible) {
-            // Use setTimeout to allow clicks on menu buttons
-            setTimeout(() => {
-              // Don't hide if focus moved to bubble menu, link popover, or color picker
-              const activeElement = document.activeElement;
-              const isInBubbleMenu = activeElement?.closest('.ob-bubble-menu');
-              const isInLinkPopover = activeElement?.closest('.ob-link-popover');
-              const isInColorPicker = activeElement?.closest('.ob-color-picker-dropdown');
-
-              if (!view.hasFocus() && !isInBubbleMenu && !isInLinkPopover && !isInColorPicker) {
-                view.dispatch(
-                  view.state.tr.setMeta(BUBBLE_MENU_PLUGIN_KEY, { hide: true })
-                );
-              }
-            }, 100);
+            // Delay so clicks on menu buttons register; don't hide if focus
+            // moved to the bubble menu, link popover, or color picker.
+            scheduleHideOnBlur(
+              view,
+              BUBBLE_MENU_PLUGIN_KEY,
+              blurHandle,
+              ['.ob-bubble-menu', '.ob-link-popover', '.ob-color-picker-dropdown'],
+              100
+            );
           }
           return false;
         },

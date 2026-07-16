@@ -31,7 +31,7 @@
     "document-editor"
   ],
   "scripts": {
-    "build": "vite build && cp -r src/styles dist/",
+    "build": "vite build && mkdir -p dist/styles && cp src/styles/editor.css dist/styles/",
     "dev": "vite build --watch",
     "lint": "eslint src",
     "clean": "rm -rf dist"

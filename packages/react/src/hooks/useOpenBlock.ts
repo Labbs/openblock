@@ -50,10 +50,20 @@ export interface UseOpenBlockOptions extends Omit<EditorConfig, 'element'> {
  * This hook properly handles React 18+ StrictMode, which mounts components twice
  * in development. The editor is created in useEffect to ensure a fresh instance
  * is created after each mount/unmount cycle.
+ *
+ * The editor is created once: structural options (`initialContent`,
+ * `customBlocks`, `customNodes`, `prosemirror`, `editable`, `placeholder`,
+ * etc.) are frozen at mount time — changing them on a later render has no
+ * effect. Event callbacks (`onUpdate`, `onSelectionChange`, `onFocus`,
+ * `onBlur`) are the exception: they are read at call time, so the latest
+ * version passed on the most recent render is always invoked.
  */
 export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor | null {
   const [editor, setEditor] = useState<OpenBlockEditor | null>(null);
   const optionsRef = useRef(options);
+  // Keep the ref in sync on every render so event callbacks (read at call
+  // time via the stable wrappers below) never go stale.
+  optionsRef.current = options;
   // Store a reference to the editor that nodeViews can use
   const editorRef = useRef<OpenBlockEditor | null>(null);
 
@@ -61,7 +71,7 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
     const { customBlocks, ...editorOptions } = optionsRef.current;
 
     // Build customNodes from custom block specs
-    const customNodes: Record<string, import('prosemirror-model').NodeSpec> = {};
+    const customNodes: NonNullable<EditorConfig['customNodes']> = {};
     if (customBlocks && customBlocks.length > 0) {
       for (const blockSpec of customBlocks) {
         customNodes[blockSpec.type] = blockSpec.nodeSpec;
@@ -94,6 +104,13 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
       ...editorOptions,
       customNodes: Object.keys(customNodes).length > 0 ? customNodes : undefined,
       prosemirror: editorOptions.prosemirror,
+      // Stable wrappers that delegate to the latest callbacks provided to the
+      // hook, so consumers can pass inline functions without them being
+      // frozen at mount time.
+      onUpdate: (blocks) => optionsRef.current.onUpdate?.(blocks),
+      onSelectionChange: (blocks) => optionsRef.current.onSelectionChange?.(blocks),
+      onFocus: () => optionsRef.current.onFocus?.(),
+      onBlur: () => optionsRef.current.onBlur?.(),
     });
 
     // Now the ref is available for nodeView callbacks
@@ -210,7 +227,7 @@ export function useEditorFocus(editor: OpenBlockEditor | null): boolean {
  * @example
  * ```tsx
  * const customItems = useCustomSlashMenuItems(editor, [DatabaseBlock, EmbedBlock]);
- * return <SlashMenu editor={editor} additionalItems={customItems} />;
+ * return <SlashMenu editor={editor} customItems={customItems} />;
  * ```
  */
 export function useCustomSlashMenuItems(

@@ -23,7 +23,7 @@
  */
 
 import { EditorView } from 'prosemirror-view';
-import { EditorState, Transaction, Plugin } from 'prosemirror-state';
+import { EditorState, Transaction, Plugin, Selection } from 'prosemirror-state';
 import { Schema } from 'prosemirror-model';
 import { history as createHistoryPlugin } from 'prosemirror-history';
 import { v4 as uuid } from 'uuid';
@@ -33,6 +33,7 @@ import { EditorConfig, defaultConfig, EditorEvents, EventHandler, CollaborationC
 import { createSchema } from '../schema';
 import { createPlugins, undo, redo } from '../plugins';
 import { injectStyles } from '../styles/injectStyles';
+import { createPlaceholderPlugin } from '../plugins/placeholderPlugin';
 import {
   Block,
   PartialBlock,
@@ -80,6 +81,9 @@ export class OpenBlockEditor {
   /** Collaboration plugins currently active */
   private _collaborationPlugins: Plugin[] = [];
 
+  /** Whether history was enabled before collaboration turned it off */
+  private _historyEnabledBeforeCollab = false;
+
   /** Destroyed flag */
   private _destroyed = false;
 
@@ -92,7 +96,7 @@ export class OpenBlockEditor {
       injectStyles();
     }
 
-    this._schema = createSchema(this._config.customNodes);
+    this._schema = createSchema(this._config.customNodes, this._config.customMarks);
     this._createEditor();
 
     if (this._config.autoFocus) {
@@ -118,6 +122,7 @@ export class OpenBlockEditor {
       history: false, // We manage history ourselves
       additionalPlugins: [
         ...(this._historyPlugin ? [this._historyPlugin] : []),
+        ...(this._config.placeholder ? [createPlaceholderPlugin(this._config.placeholder)] : []),
         ...(this._config.prosemirror?.plugins ?? []),
       ],
     });
@@ -133,7 +138,22 @@ export class OpenBlockEditor {
         role: 'textbox',
         'aria-multiline': 'true',
       },
-      ...this._config.prosemirror,
+      handleDOMEvents: {
+        focus: () => {
+          this._emit('focus', undefined);
+          this._config.onFocus?.();
+          return false;
+        },
+        blur: () => {
+          this._emit('blur', undefined);
+          this._config.onBlur?.();
+          return false;
+        },
+      },
+      // Only nodeViews may be passed as direct view props. User plugins are
+      // injected into the state above — passing them here too would register
+      // them twice, and prosemirror-view throws on direct plugins with state.
+      nodeViews: this._config.prosemirror?.nodeViews,
     });
   }
 
@@ -143,13 +163,18 @@ export class OpenBlockEditor {
     const newState = this._pmView.state.apply(tr);
     this._pmView.updateState(newState);
 
-    if (tr.docChanged) {
+    // Only pay for the doc -> blocks conversion when someone is listening:
+    // it walks and allocates the whole tree, and this is the editor's hot path.
+    if (tr.docChanged && (this._listeners.get('change')?.size || this._config.onUpdate)) {
       const blocks = this.getDocument();
       this._emit('change', { blocks });
       this._config.onUpdate?.(blocks);
     }
 
-    if (tr.selectionSet) {
+    if (
+      tr.selectionSet &&
+      (this._listeners.get('selectionChange')?.size || this._config.onSelectionChange)
+    ) {
       const blocks = this.getSelectedBlocks();
       this._emit('selectionChange', { blocks });
       this._config.onSelectionChange?.(blocks);
@@ -208,10 +233,23 @@ export class OpenBlockEditor {
    * ```
    */
   getBlock(id: string): Block | undefined {
-    let result: Block | undefined;
-    this.pm.doc.descendants((node, _pos) => {
+    const found = this._findBlockById(id);
+    return found ? nodeToBlock(found.node) : undefined;
+  }
+
+  /**
+   * Locate a block node by id. Stops traversing as soon as it is found
+   * (returning false from `descendants` only skips children, so we also
+   * short-circuit siblings with a flag).
+   */
+  private _findBlockById(
+    id: string
+  ): { node: import('prosemirror-model').Node; pos: number } | null {
+    let result: { node: import('prosemirror-model').Node; pos: number } | null = null;
+    this.pm.doc.descendants((node, pos) => {
+      if (result) return false;
       if (node.attrs.id === id) {
-        result = nodeToBlock(node);
+        result = { node, pos };
         return false;
       }
     });
@@ -221,6 +259,9 @@ export class OpenBlockEditor {
   /**
    * Get blocks that overlap with the current selection.
    *
+   * Only outermost blocks are returned: a block's children are available
+   * through its `children`/`content`, not as separate entries.
+   *
    * @returns Array of blocks within the selection range
    */
   getSelectedBlocks(): Block[] {
@@ -229,6 +270,8 @@ export class OpenBlockEditor {
     this.pm.doc.nodesBetween(from, to, (node, _pos) => {
       if (node.isBlock && node.type.name !== 'doc') {
         blocks.push(nodeToBlock(node));
+        // Don't descend: children are already inside the converted block
+        return false;
       }
     });
     return blocks;
@@ -261,19 +304,14 @@ export class OpenBlockEditor {
     placement: BlockPlacement = 'after'
   ): void {
     const refId = typeof referenceBlock === 'string' ? referenceBlock : referenceBlock.id;
-    let insertPos: number | null = null;
+    const found = refId ? this._findBlockById(refId) : null;
 
-    this.pm.doc.descendants((node, pos) => {
-      if (node.attrs.id === refId) {
-        insertPos = placement === 'before' ? pos : pos + node.nodeSize;
-        return false;
-      }
-    });
-
-    if (insertPos === null) {
+    if (!found) {
       console.warn(`Reference block not found: ${refId}`);
       return;
     }
+
+    const insertPos = placement === 'before' ? found.pos : found.pos + found.node.nodeSize;
 
     const nodes = blocks.map((block) =>
       blockToNode(this._schema, { ...block, id: block.id || uuid() } as Block)
@@ -285,25 +323,43 @@ export class OpenBlockEditor {
   }
 
   /**
-   * Update a block's properties.
+   * Update a block.
+   *
+   * Updating only `props` patches the node attributes in place. Updating
+   * `type`, `content` or `children` rebuilds the block and replaces it.
    *
    * @param block - The block ID or block object to update
-   * @param update - Partial block with new props values
+   * @param update - Partial block with the new values
    *
    * @example
    * ```typescript
    * // Change a heading's level
    * editor.updateBlock('my-heading', { props: { level: 2 } });
+   *
+   * // Replace a block's content
+   * editor.updateBlock('my-paragraph', {
+   *   content: [{ type: 'text', text: 'New text', styles: {} }],
+   * });
    * ```
    */
   updateBlock(block: BlockIdentifier, update: Partial<Block>): void {
     const id = typeof block === 'string' ? block : block.id;
-    this.pm.doc.descendants((node, pos) => {
-      if (node.attrs.id === id) {
-        this.pm.setNodeAttrs(pos, { ...node.attrs, ...update.props });
-        return false;
-      }
-    });
+    if (!id) return;
+    const found = this._findBlockById(id);
+    if (!found) return;
+
+    // Props-only update: patch attrs in place (cheap, keeps the selection)
+    if (update.type === undefined && update.content === undefined && update.children === undefined) {
+      this.pm.setNodeAttrs(found.pos, { ...found.node.attrs, ...update.props });
+      return;
+    }
+
+    // Structural update: rebuild the block from its serialized form + update
+    const merged: Block = { ...nodeToBlock(found.node), ...update, id };
+    const newNode = blockToNode(this._schema, merged);
+    const tr = this.pm.createTransaction();
+    tr.replaceWith(found.pos, found.pos + found.node.nodeSize, newNode);
+    this.pm.dispatch(tr);
   }
 
   /**
@@ -325,6 +381,9 @@ export class OpenBlockEditor {
     this.pm.doc.descendants((node, pos) => {
       if (ids.has(node.attrs.id)) {
         toDelete.push({ from: pos, to: pos + node.nodeSize });
+        // Don't descend: a matching descendant would create a nested range,
+        // and deleting it first would invalidate this ancestor's range.
+        return false;
       }
     });
 
@@ -460,7 +519,9 @@ export class OpenBlockEditor {
       this.disableCollaboration();
     }
 
-    // Disable history — y-prosemirror has its own undo manager
+    // Disable history — y-prosemirror has its own undo manager.
+    // Remember whether it was on, so disableCollaboration() can restore it.
+    this._historyEnabledBeforeCollab = this._historyEnabled;
     this.disableHistory();
 
     // Store and add collaboration plugins
@@ -492,8 +553,10 @@ export class OpenBlockEditor {
     const newState = this._pmView.state.reconfigure({ plugins });
     this._pmView.updateState(newState);
 
-    // Re-enable built-in history
-    this.enableHistory();
+    // Restore built-in history only if it was enabled before collaboration
+    if (this._historyEnabledBeforeCollab) {
+      this.enableHistory();
+    }
   }
 
   // ===========================================================================
@@ -841,8 +904,10 @@ export class OpenBlockEditor {
 
     const columnList = columnListType.create(null, columnNodes);
 
+    // Insert after the current top-level block ($from.end would be an
+    // inline position inside the textblock, not a valid block position)
     const { $from } = this.pm.selection;
-    const insertPos = $from.end($from.depth);
+    const insertPos = $from.depth > 0 ? $from.after(1) : $from.pos;
 
     const tr = this.pm.createTransaction();
     tr.insert(insertPos, columnList);
@@ -894,17 +959,40 @@ export class OpenBlockEditor {
 
     // Optionally redistribute widths evenly
     if (!width) {
-      const evenWidth = 100 / (columnList.childCount + 1);
-      let pos = columnListPos + 1;
-
-      for (let i = 0; i < columnList.childCount; i++) {
-        const col = columnList.child(i);
-        tr.setNodeMarkup(tr.mapping.map(pos), undefined, { ...col.attrs, width: evenWidth });
-        pos += col.nodeSize;
-      }
+      this._setColumnWidthsEvenly(tr, columnListPos, columnList, {
+        columnCount: columnList.childCount + 1,
+      });
     }
 
     this.pm.dispatch(tr);
+  }
+
+  /**
+   * Set every column of a columnList to an even width.
+   *
+   * Positions are mapped through the transaction, so this can be called
+   * after an insert/delete already recorded on `tr`.
+   *
+   * @param options.skipPos - Position of a column to leave untouched (e.g. one being deleted)
+   * @param options.columnCount - Column count to divide by (defaults to current childCount)
+   */
+  private _setColumnWidthsEvenly(
+    tr: Transaction,
+    columnListPos: number,
+    columnList: import('prosemirror-model').Node,
+    options: { skipPos?: number; columnCount?: number } = {}
+  ): void {
+    const count = options.columnCount ?? columnList.childCount;
+    if (count <= 0) return;
+
+    const evenWidth = 100 / count;
+    let pos = columnListPos + 1;
+    columnList.forEach((col) => {
+      if (pos !== options.skipPos) {
+        tr.setNodeMarkup(tr.mapping.map(pos), undefined, { ...col.attrs, width: evenWidth });
+      }
+      pos += col.nodeSize;
+    });
   }
 
   /**
@@ -925,33 +1013,25 @@ export class OpenBlockEditor {
 
     const tr = this.pm.createTransaction();
 
-    // If only 2 columns, remove the entire columnList and keep content
+    // Going down to one (or zero) column: unwrap the columnList and keep content
     if (columnList.childCount <= 2) {
-      // Extract content from the remaining column
       const remainingContent: import('prosemirror-model').Node[] = [];
       columnList.forEach((col, offset) => {
         const colPos = columnListPos + 1 + offset;
-        if (colPos !== columnPos) {
+        // Keep the other columns' content — or this column's own content
+        // when it is the only one (removing it just unwraps the layout)
+        if (colPos !== columnPos || columnList.childCount === 1) {
           col.forEach((child) => remainingContent.push(child));
         }
       });
 
       tr.replaceWith(columnListPos, columnListPos + columnList.nodeSize, remainingContent);
     } else {
-      // Just remove the column and redistribute
+      // Just remove the column and redistribute widths
       tr.delete(columnPos, columnPos + column.nodeSize);
-
-      // Redistribute widths
-      const remainingCount = columnList.childCount - 1;
-      const evenWidth = 100 / remainingCount;
-
-      let pos = columnListPos + 1;
-      columnList.forEach((col, offset) => {
-        const colPos = columnListPos + 1 + offset;
-        if (colPos !== columnPos) {
-          tr.setNodeMarkup(tr.mapping.map(pos), undefined, { ...col.attrs, width: evenWidth });
-        }
-        pos += col.nodeSize;
+      this._setColumnWidthsEvenly(tr, columnListPos, columnList, {
+        skipPos: columnPos,
+        columnCount: columnList.childCount - 1,
       });
     }
 
@@ -967,15 +1047,8 @@ export class OpenBlockEditor {
     const columnList = this.pm.doc.nodeAt(columnListPos);
     if (!columnList || columnList.type.name !== 'columnList') return;
 
-    const evenWidth = 100 / columnList.childCount;
     const tr = this.pm.createTransaction();
-
-    let pos = columnListPos + 1;
-    columnList.forEach((col) => {
-      tr.setNodeMarkup(pos, undefined, { ...col.attrs, width: evenWidth });
-      pos += col.nodeSize;
-    });
-
+    this._setColumnWidthsEvenly(tr, columnListPos, columnList);
     this.pm.dispatch(tr);
   }
 
@@ -990,10 +1063,13 @@ export class OpenBlockEditor {
    */
   focus(position: 'start' | 'end' | number = 'end'): void {
     this._pmView.focus();
+    // Selection.atStart/atEnd find the nearest valid selection — a raw
+    // position like doc.content.size - 1 is invalid when the first/last
+    // block is a leaf (divider, image) or a nested structure (list)
     if (position === 'start') {
-      this.pm.setSelection(this.pm.createTextSelection(1));
+      this.pm.setSelection(Selection.atStart(this.pm.doc));
     } else if (position === 'end') {
-      this.pm.setSelection(this.pm.createTextSelection(this.pm.doc.content.size - 1));
+      this.pm.setSelection(Selection.atEnd(this.pm.doc));
     } else {
       this.pm.setSelection(this.pm.createTextSelection(position));
     }

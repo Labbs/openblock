@@ -9,6 +9,9 @@
 
 import type { NodeSpec } from 'prosemirror-model';
 
+import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+import { sanitizeEmbedUrl } from '../sanitizeUrl';
+
 /**
  * Supported embed providers.
  */
@@ -25,9 +28,53 @@ export type EmbedProvider =
   | 'generic';
 
 /**
+ * List of valid embed providers, used to validate parsed attributes.
+ */
+const EMBED_PROVIDERS: readonly EmbedProvider[] = [
+  'youtube',
+  'vimeo',
+  'twitter',
+  'codepen',
+  'codesandbox',
+  'figma',
+  'loom',
+  'spotify',
+  'soundcloud',
+  'generic',
+];
+
+function isEmbedProvider(value: string | null): value is EmbedProvider {
+  return value !== null && (EMBED_PROVIDERS as readonly string[]).includes(value);
+}
+
+/** Aspect ratio must look like '16:9', '4:3', etc. */
+const ASPECT_RATIO_RE = /^\d+:\d+$/;
+
+function sanitizeAspectRatio(value: string | null | undefined): string {
+  return value && ASPECT_RATIO_RE.test(value) ? value : '16:9';
+}
+
+/**
+ * Sanitizes the width attribute: a positive integer (pixels) or a
+ * percentage string like '50%'. Anything else becomes null (auto).
+ */
+function sanitizeWidth(value: unknown): number | string | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+  if (typeof value === 'string') {
+    if (/^\d+(\.\d+)?%$/.test(value)) return value;
+    return safeParseInt(value, null);
+  }
+  return null;
+}
+
+/**
  * Embed node for external content.
  *
  * Renders as an iframe or embedded widget based on the provider.
+ * Iframe sources are restricted to known provider URLs; 'generic' embeds
+ * only accept absolute http(s) URLs.
  */
 export const embedNode: NodeSpec = {
   group: 'block',
@@ -45,8 +92,6 @@ export const embedNode: NodeSpec = {
     caption: { default: '' },
     /** Width in pixels or percentage */
     width: { default: null as number | string | null },
-    /** Height in pixels */
-    height: { default: null as number | null },
     /** Aspect ratio (e.g., '16:9', '4:3') */
     aspectRatio: { default: '16:9' },
   },
@@ -55,21 +100,28 @@ export const embedNode: NodeSpec = {
       tag: 'figure.openblock-embed',
       getAttrs: (dom) => {
         const element = dom as HTMLElement;
+        const provider = element.getAttribute('data-provider');
         return {
-          id: element.getAttribute('data-block-id'),
+          ...getBlockIdAttrs(element),
           url: element.getAttribute('data-url') || '',
-          provider: element.getAttribute('data-provider') || 'generic',
+          provider: isEmbedProvider(provider) ? provider : 'generic',
           embedId: element.getAttribute('data-embed-id') || '',
           caption: element.querySelector('figcaption')?.textContent || '',
-          width: element.getAttribute('data-width'),
-          height: element.getAttribute('data-height'),
-          aspectRatio: element.getAttribute('data-aspect-ratio') || '16:9',
+          width: sanitizeWidth(element.getAttribute('data-width')),
+          aspectRatio: sanitizeAspectRatio(element.getAttribute('data-aspect-ratio')),
         };
       },
     },
   ],
   toDOM: (node) => {
-    const { url, provider, embedId, caption, width, height, aspectRatio } = node.attrs;
+    const { url, caption } = node.attrs;
+    // Attrs can come from JSON (not only parseDOM), so re-validate here.
+    const provider: EmbedProvider = isEmbedProvider(node.attrs.provider)
+      ? node.attrs.provider
+      : 'generic';
+    const embedId = node.attrs.embedId;
+    const aspectRatio = sanitizeAspectRatio(node.attrs.aspectRatio);
+    const width = sanitizeWidth(node.attrs.width);
     const embedUrl = getEmbedUrl(provider, embedId, url);
 
     const style = width ? `max-width: ${typeof width === 'number' ? `${width}px` : width}` : '';
@@ -78,13 +130,12 @@ export const embedNode: NodeSpec = {
       'figure',
       {
         class: `openblock-embed openblock-embed--${provider}`,
-        'data-block-id': node.attrs.id || '',
+        ...blockIdToDOM(node),
         'data-url': url,
         'data-provider': provider,
         'data-embed-id': embedId,
         'data-aspect-ratio': aspectRatio,
         ...(width ? { 'data-width': String(width) } : {}),
-        ...(height ? { 'data-height': String(height) } : {}),
         style,
       },
       [
@@ -101,6 +152,8 @@ export const embedNode: NodeSpec = {
                 frameborder: '0',
                 allowfullscreen: 'true',
                 allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+                sandbox: 'allow-scripts allow-same-origin allow-presentation allow-popups',
+                referrerpolicy: 'strict-origin-when-cross-origin',
                 loading: 'lazy',
               },
             ]
@@ -119,6 +172,9 @@ export const embedNode: NodeSpec = {
 
 /**
  * Gets the embed URL for a given provider and embed ID.
+ *
+ * For the 'generic' provider, only absolute http(s) URLs are allowed
+ * (anything else renders the placeholder instead of an iframe).
  */
 function getEmbedUrl(provider: EmbedProvider, embedId: string, originalUrl: string): string {
   if (!embedId && !originalUrl) return '';
@@ -145,20 +201,26 @@ function getEmbedUrl(provider: EmbedProvider, embedId: string, originalUrl: stri
       return `https://w.soundcloud.com/player/?url=${encodeURIComponent(originalUrl)}&auto_play=false`;
     case 'generic':
     default:
-      return originalUrl;
+      return sanitizeEmbedUrl(originalUrl) ?? '';
   }
 }
 
 /**
  * Parses a URL and extracts embed information.
  *
+ * Only absolute http(s) URLs are considered embeddable; other schemes
+ * (javascript:, data:, etc.) return null.
+ *
  * @param url - The URL to parse
  * @returns Provider and embed ID, or null if not recognized
  */
 export function parseEmbedUrl(url: string): { provider: EmbedProvider; embedId: string } | null {
+  // Never fall back to 'generic' for non-http(s) URLs
+  if (sanitizeEmbedUrl(url) === null) return null;
+
   try {
     const urlObj = new URL(url);
-    const hostname = urlObj.hostname.replace('www.', '');
+    const hostname = urlObj.hostname.replace(/^www\./, '');
 
     // YouTube
     if (hostname === 'youtube.com' || hostname === 'youtu.be') {
@@ -237,7 +299,7 @@ export function parseEmbedUrl(url: string): { provider: EmbedProvider; embedId: 
       return { provider: 'soundcloud', embedId: url };
     }
 
-    // Generic - try to embed as iframe
+    // Generic http(s) URL - try to embed as iframe
     return { provider: 'generic', embedId: url };
   } catch {
     return null;

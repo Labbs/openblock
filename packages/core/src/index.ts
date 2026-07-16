@@ -198,7 +198,7 @@ export {
 export type { BubbleMenuConfig, BubbleMenuState, BlockTypeInfo, TextAlign } from './plugins';
 
 // Table plugin
-export { createTablePlugin, TABLE_PLUGIN_KEY } from './plugins';
+export { createTablePlugin } from './plugins';
 export type { TablePluginConfig } from './plugins';
 
 // Keyboard shortcuts
@@ -206,8 +206,12 @@ export { createKeyboardShortcutsPlugin, DEFAULT_KEYBOARD_SHORTCUTS } from './plu
 export type { KeyboardShortcutsConfig, KeyboardShortcut } from './plugins';
 
 // Checklist plugin
-export { createChecklistPlugin } from './plugins';
+export { createChecklistPlugin, CHECKLIST_PLUGIN_KEY } from './plugins';
 export type { ChecklistPluginConfig } from './plugins';
+
+// Placeholder plugin
+export { createPlaceholderPlugin, PLACEHOLDER_PLUGIN_KEY } from './plugins/placeholderPlugin';
+export type { PlaceholderConfig } from './plugins/placeholderPlugin';
 
 // Media menu plugin
 export {
@@ -226,20 +230,6 @@ export type {
 
 // History (undo/redo)
 export { undo, redo } from './plugins';
-
-// ===========================================================================
-// TYPES (additional schema/extension types)
-// ===========================================================================
-
-export type {
-  BlockSpec,
-  MarkSpec,
-  PropSpec,
-  PropType,
-  ContentType,
-  Extension,
-  CommandFn,
-} from './types';
 
 // ===========================================================================
 // STYLES

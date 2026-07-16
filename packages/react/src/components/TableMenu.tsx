@@ -23,6 +23,8 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   OpenBlockEditor,
+  EditorState,
+  Transaction,
   isInTable,
   getTableInfo,
   addRowBefore,
@@ -33,6 +35,15 @@ import {
   deleteColumn,
   deleteTable,
 } from '@labbs/openblock-core';
+import { useClickOutside } from '../hooks/useClickOutside';
+
+/**
+ * Signature shared by the table commands from core.
+ */
+type TableCommand = (
+  state: EditorState,
+  dispatch: (tr: Transaction) => void
+) => boolean;
 
 /**
  * Props for TableMenu component.
@@ -86,21 +97,7 @@ function TableMenuDropdown({ label, icon, children }: TableMenuDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+  useClickOutside([containerRef], () => setIsOpen(false), isOpen);
 
   return (
     <div className="ob-table-menu-dropdown" ref={containerRef}>
@@ -216,7 +213,17 @@ export function TableMenu({
 
       if (isInsideTable) {
         const info = getTableInfo(state);
-        setTableInfo(info);
+        // Bail out when the computed info is equivalent to the current one
+        setTableInfo((prev) =>
+          prev &&
+          info &&
+          prev.rowIndex === info.rowIndex &&
+          prev.cellIndex === info.cellIndex &&
+          prev.rowCount === info.rowCount &&
+          prev.colCount === info.colCount
+            ? prev
+            : info
+        );
 
         // Get coordinates of the table
         const { $from } = state.selection;
@@ -228,10 +235,12 @@ export function TableMenu({
             const domNode = editor.pm.view.nodeDOM(pos) as HTMLElement | null;
             if (domNode) {
               const rect = domNode.getBoundingClientRect();
-              setCoords({
-                left: rect.left,
-                top: rect.top - 44, // Menu height + gap
-              });
+              const left = rect.left;
+              const top = rect.top - 44; // Menu height + gap
+              // Bail out when the coordinates did not change
+              setCoords((prev) =>
+                prev && prev.left === left && prev.top === top ? prev : { left, top }
+              );
             }
             break;
           }
@@ -248,47 +257,15 @@ export function TableMenu({
     return unsubscribe;
   }, [editor]);
 
-  const handleAddRowBefore = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    addRowBefore(editor.pm.state, editor.pm.view.dispatch);
-    editor.pm.view.focus();
-  }, [editor]);
-
-  const handleAddRowAfter = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    addRowAfter(editor.pm.state, editor.pm.view.dispatch);
-    editor.pm.view.focus();
-  }, [editor]);
-
-  const handleDeleteRow = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    deleteRow(editor.pm.state, editor.pm.view.dispatch);
-    editor.pm.view.focus();
-  }, [editor]);
-
-  const handleAddColumnBefore = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    addColumnBefore(editor.pm.state, editor.pm.view.dispatch);
-    editor.pm.view.focus();
-  }, [editor]);
-
-  const handleAddColumnAfter = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    addColumnAfter(editor.pm.state, editor.pm.view.dispatch);
-    editor.pm.view.focus();
-  }, [editor]);
-
-  const handleDeleteColumn = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    deleteColumn(editor.pm.state, editor.pm.view.dispatch);
-    editor.pm.view.focus();
-  }, [editor]);
-
-  const handleDeleteTable = useCallback(() => {
-    if (!editor || editor.isDestroyed) return;
-    deleteTable(editor.pm.state, editor.pm.view.dispatch);
-    editor.pm.view.focus();
-  }, [editor]);
+  /** Run a table command against the current editor state, then refocus. */
+  const run = useCallback(
+    (command: TableCommand) => {
+      if (!editor || editor.isDestroyed) return;
+      command(editor.pm.state, editor.pm.view.dispatch);
+      editor.pm.view.focus();
+    },
+    [editor]
+  );
 
   if (!editor || editor.isDestroyed || !inTable || !coords) {
     return null;
@@ -312,7 +289,7 @@ export function TableMenu({
         <button
           type="button"
           className="ob-table-menu-dropdown-item"
-          onClick={handleAddRowBefore}
+          onClick={() => run(addRowBefore)}
           onMouseDown={(e) => e.preventDefault()}
         >
           {Icons.addRowAbove}
@@ -321,7 +298,7 @@ export function TableMenu({
         <button
           type="button"
           className="ob-table-menu-dropdown-item"
-          onClick={handleAddRowAfter}
+          onClick={() => run(addRowAfter)}
           onMouseDown={(e) => e.preventDefault()}
         >
           {Icons.addRowBelow}
@@ -330,7 +307,7 @@ export function TableMenu({
         <button
           type="button"
           className="ob-table-menu-dropdown-item ob-table-menu-dropdown-item--danger"
-          onClick={handleDeleteRow}
+          onClick={() => run(deleteRow)}
           onMouseDown={(e) => e.preventDefault()}
           disabled={tableInfo?.rowCount === 1}
         >
@@ -343,7 +320,7 @@ export function TableMenu({
         <button
           type="button"
           className="ob-table-menu-dropdown-item"
-          onClick={handleAddColumnBefore}
+          onClick={() => run(addColumnBefore)}
           onMouseDown={(e) => e.preventDefault()}
         >
           {Icons.addColumnLeft}
@@ -352,7 +329,7 @@ export function TableMenu({
         <button
           type="button"
           className="ob-table-menu-dropdown-item"
-          onClick={handleAddColumnAfter}
+          onClick={() => run(addColumnAfter)}
           onMouseDown={(e) => e.preventDefault()}
         >
           {Icons.addColumnRight}
@@ -361,7 +338,7 @@ export function TableMenu({
         <button
           type="button"
           className="ob-table-menu-dropdown-item ob-table-menu-dropdown-item--danger"
-          onClick={handleDeleteColumn}
+          onClick={() => run(deleteColumn)}
           onMouseDown={(e) => e.preventDefault()}
           disabled={tableInfo?.colCount === 1}
         >
@@ -373,7 +350,7 @@ export function TableMenu({
       <span className="ob-table-menu-divider" />
 
       <TableMenuButton
-        onClick={handleDeleteTable}
+        onClick={() => run(deleteTable)}
         title="Delete table"
         danger
       >

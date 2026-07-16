@@ -67,10 +67,10 @@ export {
 } from './multiBlockSelectionPlugin';
 export type { MultiBlockSelectionConfig, MultiBlockSelectionState } from './multiBlockSelectionPlugin';
 
-export { createTablePlugin, TABLE_PLUGIN_KEY } from './tablePlugin';
+export { createTablePlugin } from './tablePlugin';
 export type { TablePluginConfig } from './tablePlugin';
 
-export { createChecklistPlugin } from './checklistPlugin';
+export { createChecklistPlugin, CHECKLIST_PLUGIN_KEY } from './checklistPlugin';
 export type { ChecklistPluginConfig } from './checklistPlugin';
 
 export {

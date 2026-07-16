@@ -36,17 +36,21 @@ export function createBlockIdPlugin(): Plugin {
   return new Plugin({
     key: BLOCK_ID_PLUGIN_KEY,
 
-    appendTransaction(_transactions, _oldState, newState) {
+    appendTransaction(transactions, _oldState, newState) {
+      // Only scan the document when it actually changed
+      if (!transactions.some((tr) => tr.docChanged)) {
+        return null;
+      }
+
       // Collect all nodes that need IDs first, then apply changes
       const nodesToUpdate: Array<{ pos: number; attrs: Record<string, unknown> }> = [];
+      // Track IDs already seen to regenerate duplicates (e.g., copy/paste)
+      const seenIds = new Set<string>();
 
       newState.doc.descendants((node, pos) => {
-        // Skip doc node and inline nodes
-        if (node.type.name === 'doc' || !node.isBlock) {
-          // Also check for column nodes (not in block group but need IDs)
-          if (node.type.name !== 'column') {
-            return;
-          }
+        // Only handle block nodes (plus column nodes, which need IDs too)
+        if (!node.isBlock && node.type.name !== 'column') {
+          return;
         }
 
         // Only assign ID if the node type has an id attribute defined
@@ -54,12 +58,16 @@ export function createBlockIdPlugin(): Plugin {
           return;
         }
 
-        // Collect nodes that need IDs
-        if (!node.attrs.id) {
+        const id = node.attrs.id as string | null;
+
+        // Assign a fresh ID when missing, or when duplicated in the doc
+        if (!id || seenIds.has(id)) {
           nodesToUpdate.push({
             pos,
             attrs: { ...node.attrs, id: uuid() },
           });
+        } else {
+          seenIds.add(id);
         }
       });
 

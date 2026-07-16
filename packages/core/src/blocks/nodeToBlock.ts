@@ -5,9 +5,8 @@
  */
 
 import { Node as PMNode, Mark } from 'prosemirror-model';
-import { v4 as uuid } from 'uuid';
 
-import type { Block, InlineContent, TextStyles } from './types';
+import type { Block, InlineContent, LinkContent, StyledText, TextStyles } from './types';
 
 /**
  * Container node types that have block children instead of inline content.
@@ -18,6 +17,8 @@ const CONTAINER_TYPES = new Set([
   'listItem',
   'checkList',
   'checkListItem',
+  'columnList',
+  'column',
   'table',
   'tableRow',
   'tableCell',
@@ -47,7 +48,10 @@ export function nodeToBlock(node: PMNode): Block {
   const { id, ...props } = node.attrs;
 
   const block: Block = {
-    id: id || uuid(),
+    // Do not invent ids at serialization time: nodes without an id (the
+    // blockIdPlugin assigns them at runtime) serialize with an empty id so
+    // repeated conversions of the same document stay stable.
+    id: id || '',
     type: node.type.name,
     props,
   };
@@ -110,12 +114,45 @@ function nodeContentToInline(node: PMNode): InlineContent[] {
 
   node.content.forEach((child) => {
     if (child.isText) {
-      content.push({
+      const linkMark = child.marks.find((mark) => mark.type.name === 'link');
+      const styledText: StyledText = {
         type: 'text',
         text: child.text || '',
         styles: marksToStyles(child.marks),
-      });
+      };
+
+      if (linkMark) {
+        const previous = content[content.length - 1];
+        // Merge consecutive text nodes carrying the same link mark into one link item
+        if (
+          previous &&
+          previous.type === 'link' &&
+          previous.href === linkMark.attrs.href &&
+          (previous.title ?? null) === (linkMark.attrs.title ?? null) &&
+          (previous.target ?? null) === (linkMark.attrs.target ?? null)
+        ) {
+          previous.content.push(styledText);
+        } else {
+          const link: LinkContent = {
+            type: 'link',
+            href: linkMark.attrs.href,
+            content: [styledText],
+          };
+          if (linkMark.attrs.title) {
+            link.title = linkMark.attrs.title;
+          }
+          if (linkMark.attrs.target) {
+            link.target = linkMark.attrs.target;
+          }
+          content.push(link);
+        }
+      } else {
+        content.push(styledText);
+      }
+    } else if (child.type.name === 'hardBreak') {
+      content.push({ type: 'hardBreak' });
     }
+    // Other non-text inline nodes have no block representation and are skipped
   });
 
   return content;
@@ -147,10 +184,14 @@ export function marksToStyles(marks: readonly Mark[]): TextStyles {
       case 'code':
         styles.code = true;
         break;
-      // Link marks store their attrs in styles
-      case 'link':
-        // Links are handled separately in the future
+      case 'textColor':
+        styles.textColor = mark.attrs.color;
         break;
+      case 'backgroundColor':
+        styles.backgroundColor = mark.attrs.color;
+        break;
+      // Link marks are serialized as `link` inline content items
+      // (see nodeContentToInline), not as text styles
     }
   }
 

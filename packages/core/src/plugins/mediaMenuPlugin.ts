@@ -10,6 +10,12 @@
 import { Plugin, PluginKey, EditorState, NodeSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import type { Node } from 'prosemirror-model';
+import {
+  BlurHideHandle,
+  createBlurHideHandle,
+  disposeBlurHideHandle,
+  scheduleHideOnBlur,
+} from './menuHelpers';
 
 /**
  * Plugin key for accessing media menu state.
@@ -43,7 +49,6 @@ export interface EmbedAttrs {
   embedId: string;
   caption: string;
   width: number | string | null;
-  height: number | null;
   aspectRatio: string;
 }
 
@@ -121,6 +126,10 @@ function getMediaSelection(state: EditorState): { mediaType: MediaType; pos: num
  * @returns A ProseMirror plugin
  */
 export function createMediaMenuPlugin(): Plugin {
+  // Shared between the blur handler (props) and the plugin view lifecycle
+  // so pending hide timers never dispatch on a destroyed view.
+  const blurHandle: BlurHideHandle = createBlurHideHandle();
+
   return new Plugin<MediaMenuState>({
     key: MEDIA_MENU_PLUGIN_KEY,
 
@@ -181,7 +190,14 @@ export function createMediaMenuPlugin(): Plugin {
     },
 
     view(editorView) {
+      // A new view is alive again (the plugin instance may be reused)
+      blurHandle.destroyed = false;
+
+      let rafId: number | null = null;
+
       const updateCoords = () => {
+        rafId = null;
+        if (blurHandle.destroyed) return;
         const state = MEDIA_MENU_PLUGIN_KEY.getState(editorView.state);
         if (!state?.visible || state.nodePos === null) return;
 
@@ -214,11 +230,18 @@ export function createMediaMenuPlugin(): Plugin {
 
           if (state?.visible && !state.coords) {
             // Use requestAnimationFrame to ensure DOM is updated
-            requestAnimationFrame(updateCoords);
+            if (rafId !== null) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(updateCoords);
           }
         },
 
-        destroy() {},
+        destroy() {
+          if (rafId !== null) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+          disposeBlurHideHandle(blurHandle);
+        },
       };
     },
 
@@ -228,17 +251,13 @@ export function createMediaMenuPlugin(): Plugin {
         blur(view) {
           const state = MEDIA_MENU_PLUGIN_KEY.getState(view.state);
           if (state?.visible) {
-            setTimeout(() => {
-              const activeElement = document.activeElement;
-              const isInMediaMenu = activeElement?.closest('.ob-media-menu');
-              const isInMediaPopover = activeElement?.closest('.ob-media-url-popover');
-
-              if (!view.hasFocus() && !isInMediaMenu && !isInMediaPopover) {
-                view.dispatch(
-                  view.state.tr.setMeta(MEDIA_MENU_PLUGIN_KEY, { hide: true })
-                );
-              }
-            }, 150);
+            scheduleHideOnBlur(
+              view,
+              MEDIA_MENU_PLUGIN_KEY,
+              blurHandle,
+              ['.ob-media-menu', '.ob-media-url-popover'],
+              150
+            );
           }
           return false;
         },

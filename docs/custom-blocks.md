@@ -68,7 +68,7 @@ function Editor() {
   return (
     <>
       <OpenBlockView editor={editor} />
-      <SlashMenu editor={editor} additionalItems={customSlashMenuItems} />
+      <SlashMenu editor={editor} customItems={customSlashMenuItems} />
     </>
   );
 }
@@ -119,7 +119,7 @@ interface SlashMenuConfig {
 | `block` | `{ id, type, props }` | Block data with typed props |
 | `editor` | `OpenBlockEditor` | Editor instance |
 | `isEditable` | `boolean` | Whether editing is enabled |
-| `contentRef` | `React.RefObject` | For `content: 'inline'` blocks |
+| `contentRef` | `React.Ref` | For `content: 'inline'` blocks |
 
 #### `useCustomSlashMenuItems(editor, customBlocks)`
 
@@ -127,7 +127,7 @@ Generates slash menu items from custom blocks that have `slashMenu` configured.
 
 ```tsx
 const customItems = useCustomSlashMenuItems(editor, CUSTOM_BLOCKS);
-return <SlashMenu editor={editor} additionalItems={customItems} />;
+return <SlashMenu editor={editor} customItems={customItems} />;
 ```
 
 #### `useUpdateBlock(editor, blockId)`

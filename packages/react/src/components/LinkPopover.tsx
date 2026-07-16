@@ -17,6 +17,8 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { OpenBlockEditor } from '@labbs/openblock-core';
+import { useClickOutside } from '../hooks/useClickOutside';
+import { LinkIcon } from './icons';
 
 /**
  * Props for LinkPopover component.
@@ -108,34 +110,9 @@ export function LinkPopover({
     inputRef.current?.select();
   }, []);
 
-  // Close on click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-
-      // Don't close if clicking on the popover itself
-      if (popoverRef.current && popoverRef.current.contains(target)) {
-        return;
-      }
-
-      // Don't close if clicking on the trigger button
-      if (triggerRef?.current && triggerRef.current.contains(target)) {
-        return;
-      }
-
-      onClose();
-    };
-
-    // Use requestAnimationFrame to ensure the popover is rendered before listening
-    const frameId = requestAnimationFrame(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    });
-
-    return () => {
-      cancelAnimationFrame(frameId);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [onClose, triggerRef]);
+  // Close on click outside (defer: ensure the popover is rendered before
+  // listening, so the opening click doesn't immediately close it)
+  useClickOutside([popoverRef, triggerRef], onClose, true, { defer: true });
 
   // Close on Escape
   useEffect(() => {
@@ -206,15 +183,7 @@ export function LinkPopover({
       <form onSubmit={handleSubmit} className="ob-link-popover-form">
         <div className="ob-link-popover-input-row">
           <div className={`ob-link-popover-input-wrapper ${error ? 'ob-link-popover-input-wrapper--error' : ''}`}>
-            <svg
-              className="ob-link-popover-input-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-            </svg>
+            <LinkIcon className="ob-link-popover-input-icon" />
             <input
               ref={inputRef}
               type="text"

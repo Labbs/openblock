@@ -6,10 +6,17 @@
 
 import type { MarkSpec, DOMOutputSpec, Mark } from 'prosemirror-model';
 
+import { sanitizeLinkHref } from '../sanitizeUrl';
+
 /**
  * Link mark spec.
  *
  * Renders as `<a>` in HTML. Supports href, title, and target attributes.
+ *
+ * The href is validated (http:, https:, mailto:, tel: and relative URLs
+ * only): unsafe hrefs are rejected when parsing DOM, and neutralized to `#`
+ * when rendering (attrs can also arrive through JSON, bypassing parseDOM).
+ * Links with `target="_blank"` get `rel="noopener noreferrer"`.
  *
  * @example
  * ```typescript
@@ -35,8 +42,11 @@ export const linkMark: MarkSpec = {
     {
       tag: 'a[href]',
       getAttrs(dom: HTMLElement) {
+        const href = sanitizeLinkHref(dom.getAttribute('href'));
+        // Reject links with unsafe hrefs (e.g. javascript:) entirely
+        if (href === null) return false;
         return {
-          href: dom.getAttribute('href'),
+          href,
           title: dom.getAttribute('title'),
           target: dom.getAttribute('target'),
         };
@@ -44,12 +54,16 @@ export const linkMark: MarkSpec = {
     },
   ],
   toDOM(mark: Mark): DOMOutputSpec {
+    // Attrs can come from JSON (not only parseDOM), so neutralize here too.
+    const href = sanitizeLinkHref(mark.attrs.href) ?? '#';
+    const target = mark.attrs.target;
     return [
       'a',
       {
-        href: mark.attrs.href,
+        href,
         title: mark.attrs.title,
-        target: mark.attrs.target,
+        target,
+        ...(target === '_blank' ? { rel: 'noopener noreferrer' } : {}),
       },
       0,
     ];

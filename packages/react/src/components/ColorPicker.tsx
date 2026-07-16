@@ -46,8 +46,10 @@
  * @module
  */
 
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { OpenBlockEditor } from '@labbs/openblock-core';
+import { useClickOutside } from '../hooks/useClickOutside';
+import { useFlipPosition } from '../hooks/useFlipPosition';
 
 // ============================================================================
 // Types
@@ -168,52 +170,36 @@ export function ColorPicker({
   onClose,
 }: ColorPickerProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ left: number; top?: number; bottom?: number }>({ left: 0 });
+  // Anchor rect measured when the dropdown is toggled (never in render)
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const hasAnyColor = currentTextColor || currentBackgroundColor;
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        onClose?.();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
+  useClickOutside(
+    [containerRef],
+    () => {
+      setIsOpen(false);
+      onClose?.();
+    },
+    isOpen
+  );
 
   // Determine if dropdown should open upward based on available space
-  useLayoutEffect(() => {
-    if (!isOpen || !buttonRef.current || !dropdownRef.current) return;
-
-    const buttonRect = buttonRef.current.getBoundingClientRect();
-    const dropdownHeight = dropdownRef.current.offsetHeight || 250;
-    const spaceBelow = window.innerHeight - buttonRect.bottom - 8;
-    const spaceAbove = buttonRect.top - 8;
-
-    const shouldOpenUpward = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
-
-    setDropdownPosition({
-      left: buttonRect.left + buttonRect.width / 2,
-      ...(shouldOpenUpward
-        ? { bottom: window.innerHeight - buttonRect.top + 8 }
-        : { top: buttonRect.bottom + 8 }),
-    });
-  }, [isOpen]);
+  const openUpward = useFlipPosition({
+    active: isOpen,
+    elementRef: dropdownRef,
+    getAnchorRect: () => anchorRect,
+    estimatedHeight: 250,
+    recomputeDeps: [anchorRect],
+  });
 
   const handleToggle = useCallback(() => {
-    setIsOpen(!isOpen);
-  }, [isOpen]);
+    setAnchorRect(buttonRef.current?.getBoundingClientRect() ?? null);
+    setIsOpen((open) => !open);
+  }, []);
 
   const handleSelectTextColor = useCallback(
     (color: string) => {
@@ -263,16 +249,17 @@ export function ColorPicker({
         </svg>
       </button>
 
-      {isOpen && (
+      {isOpen && anchorRect && (
         <div
           ref={dropdownRef}
           className="ob-color-picker-dropdown"
           role="listbox"
           style={{
             position: 'fixed',
-            left: dropdownPosition.left,
-            top: dropdownPosition.top,
-            bottom: dropdownPosition.bottom,
+            left: anchorRect.left + anchorRect.width / 2,
+            ...(openUpward
+              ? { bottom: window.innerHeight - anchorRect.top + 8 }
+              : { top: anchorRect.bottom + 8 }),
             transform: 'translateX(-50%)',
           }}
         >

@@ -13,9 +13,10 @@
  * @module
  */
 
-import { Plugin, PluginKey, EditorState, Transaction } from 'prosemirror-state';
+import { Plugin, EditorState, Transaction } from 'prosemirror-state';
 import { keymap } from 'prosemirror-keymap';
 import {
+  findTableContext,
   goToNextCell,
   goToPreviousCell,
   addRowAfter,
@@ -24,11 +25,6 @@ import {
   addColumnBefore,
   deleteRow,
 } from '../commands/tableCommands';
-
-/**
- * Plugin key for the table plugin.
- */
-export const TABLE_PLUGIN_KEY = new PluginKey('tablePlugin');
 
 /**
  * ProseMirror command type.
@@ -59,12 +55,30 @@ export interface TablePluginConfig {
  * @returns A ProseMirror plugin
  */
 export function createTablePlugin(config: TablePluginConfig = {}): Plugin {
-  const { tabNavigation = true } = config;
+  const { tabNavigation = true, addRowOnTab = true } = config;
 
   const keys: Record<string, Command> = {};
 
   if (tabNavigation) {
-    keys['Tab'] = goToNextCell;
+    if (addRowOnTab) {
+      // goToNextCell adds a new row when Tab is pressed in the last cell
+      keys['Tab'] = goToNextCell;
+    } else {
+      // Same navigation, but stay put in the last cell instead of adding a row
+      keys['Tab'] = (state, dispatch) => {
+        const ctx = findTableContext(state);
+        if (!ctx) return false;
+
+        const isLastCell =
+          ctx.rowIndex === ctx.rowCount - 1 && ctx.cellIndex === ctx.colCount - 1;
+        if (isLastCell) {
+          // Consume Tab (don't indent/lose focus) without adding a row
+          return true;
+        }
+
+        return goToNextCell(state, dispatch);
+      };
+    }
     keys['Shift-Tab'] = goToPreviousCell;
   }
 

@@ -132,15 +132,19 @@
  * @see {@link DEFAULT_BUBBLE_MENU_ORDER} for the default order
  */
 
-import React, { useEffect, useState, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   OpenBlockEditor,
   BUBBLE_MENU_PLUGIN_KEY,
   BubbleMenuState,
   BlockTypeInfo,
 } from '@labbs/openblock-core';
+import { usePluginState } from '../hooks/usePluginState';
+import { useClickOutside } from '../hooks/useClickOutside';
+import { useFlipPosition } from '../hooks/useFlipPosition';
 import { LinkPopover } from './LinkPopover';
 import { ColorPicker } from './ColorPicker';
+import { LinkIcon, QuoteIcon } from './icons';
 
 // ============================================================================
 // Types
@@ -248,12 +252,7 @@ const Icons = {
       <path d="m8 6-6 6 6 6" />
     </svg>
   ),
-  link: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-    </svg>
-  ),
+  link: <LinkIcon />,
   alignLeft: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
       <path d="M4 6h16M4 12h10M4 18h14" />
@@ -278,8 +277,9 @@ const Icons = {
 /**
  * Default bubble menu items.
  * These are the built-in formatting options available in the menu.
+ * Frozen: use `customItems` to add or override items.
  */
-export const BUBBLE_MENU_ITEMS: Record<string, BubbleMenuItem> = {
+export const BUBBLE_MENU_ITEMS: Record<string, BubbleMenuItem> = Object.freeze({
   bold: {
     id: 'bold',
     label: 'Bold (Cmd+B)',
@@ -360,7 +360,7 @@ export const BUBBLE_MENU_ITEMS: Record<string, BubbleMenuItem> = {
       editor.pm.view.focus();
     },
   },
-};
+});
 
 /**
  * Default order of items in the bubble menu.
@@ -472,12 +472,7 @@ const BLOCK_TYPE_OPTIONS: BlockTypeOption[] = [
   {
     type: 'blockquote',
     label: 'Quote',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" />
-        <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v4z" />
-      </svg>
-    ),
+    icon: <QuoteIcon />,
   },
   {
     type: 'bulletList',
@@ -561,38 +556,18 @@ interface BlockTypeSelectorProps {
 
 function BlockTypeSelector({ editor, blockType }: BlockTypeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [openUpward, setOpenUpward] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
+  useClickOutside([containerRef], () => setIsOpen(false), isOpen);
 
   // Determine if dropdown should open upward based on available space
-  useLayoutEffect(() => {
-    if (!isOpen || !buttonRef.current || !dropdownRef.current) return;
-
-    const buttonRect = buttonRef.current.getBoundingClientRect();
-    const dropdownHeight = dropdownRef.current.offsetHeight || 300;
-    const spaceBelow = window.innerHeight - buttonRect.bottom - 8;
-    const spaceAbove = buttonRect.top - 8;
-
-    setOpenUpward(spaceBelow < dropdownHeight && spaceAbove > spaceBelow);
-  }, [isOpen]);
+  const openUpward = useFlipPosition({
+    active: isOpen,
+    elementRef: dropdownRef,
+    getAnchorRect: () => buttonRef.current?.getBoundingClientRect() ?? null,
+  });
 
   const handleSelect = useCallback(
     (option: BlockTypeOption) => {
@@ -675,31 +650,21 @@ function BlockTypeSelector({ editor, blockType }: BlockTypeSelectorProps) {
  * Renders a floating toolbar when text is selected for quick formatting access.
  * Supports custom items and reordering via props.
  */
+const EMPTY_CUSTOM_ITEMS: BubbleMenuItem[] = [];
+const EMPTY_HIDE_ITEMS: string[] = [];
+
 export function BubbleMenu({
   editor,
-  customItems = [],
+  customItems = EMPTY_CUSTOM_ITEMS,
   itemOrder,
-  hideItems = [],
+  hideItems = EMPTY_HIDE_ITEMS,
   children,
   className,
 }: BubbleMenuProps): React.ReactElement | null {
-  const [menuState, setMenuState] = useState<BubbleMenuState | null>(null);
+  const menuState = usePluginState(editor, BUBBLE_MENU_PLUGIN_KEY);
   const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const [linkPopoverPosition, setLinkPopoverPosition] = useState<{ left: number; top: number } | null>(null);
   const linkButtonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!editor || editor.isDestroyed) return;
-
-    const updateState = () => {
-      const state = BUBBLE_MENU_PLUGIN_KEY.getState(editor.pm.state);
-      setMenuState(state ?? null);
-    };
-
-    updateState();
-
-    const unsubscribe = editor.on('transaction', updateState);
-    return unsubscribe;
-  }, [editor]);
 
   // Close link popover when menu hides
   useEffect(() => {
@@ -709,12 +674,40 @@ export function BubbleMenu({
   }, [menuState?.visible]);
 
   const handleLinkClick = useCallback(() => {
+    // Measure the trigger button once, when the popover opens (never in render)
+    const buttonRect = linkButtonRef.current?.getBoundingClientRect();
+    if (buttonRect) {
+      setLinkPopoverPosition({ left: buttonRect.left, top: buttonRect.bottom + 8 });
+    }
     setShowLinkPopover(true);
   }, []);
 
   const closeLinkPopover = useCallback(() => {
     setShowLinkPopover(false);
   }, []);
+
+  // Build the items map (default + custom)
+  const allItems = useMemo(() => {
+    const items: Record<string, BubbleMenuItem> = { ...BUBBLE_MENU_ITEMS };
+    for (const item of customItems) {
+      items[item.id] = item;
+    }
+    return items;
+  }, [customItems]);
+
+  // Determine the order to render
+  const order = useMemo(
+    () =>
+      itemOrder || [
+        ...DEFAULT_BUBBLE_MENU_ORDER,
+        // Add custom items at the end if not in custom order
+        ...(customItems.length > 0 ? ['---', ...customItems.map((i) => i.id)] : []),
+      ],
+    [itemOrder, customItems]
+  );
+
+  // Filter out hidden items
+  const hiddenSet = useMemo(() => new Set(hideItems), [hideItems]);
 
   if (!editor || editor.isDestroyed || !menuState?.visible || !menuState.coords) {
     return null;
@@ -736,22 +729,6 @@ export function BubbleMenu({
       </div>
     );
   }
-
-  // Build the items map (default + custom)
-  const allItems: Record<string, BubbleMenuItem> = { ...BUBBLE_MENU_ITEMS };
-  for (const item of customItems) {
-    allItems[item.id] = item;
-  }
-
-  // Determine the order to render
-  const order = itemOrder || [
-    ...DEFAULT_BUBBLE_MENU_ORDER,
-    // Add custom items at the end if not in custom order
-    ...(customItems.length > 0 ? ['---', ...customItems.map((i) => i.id)] : []),
-  ];
-
-  // Filter out hidden items
-  const hiddenSet = new Set(hideItems);
 
   const { activeMarks, blockType } = menuState;
 
@@ -828,16 +805,13 @@ export function BubbleMenu({
     >
       {order.map((itemId, index) => renderItem(itemId, index))}
 
-      {showLinkPopover && linkButtonRef.current && (
+      {showLinkPopover && linkPopoverPosition && (
         <LinkPopover
           editor={editor}
           currentUrl={activeMarks.link}
           onClose={closeLinkPopover}
           triggerRef={linkButtonRef}
-          position={{
-            left: linkButtonRef.current.getBoundingClientRect().left,
-            top: linkButtonRef.current.getBoundingClientRect().bottom + 8,
-          }}
+          position={linkPopoverPosition}
         />
       )}
     </div>

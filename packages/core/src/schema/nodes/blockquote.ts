@@ -8,6 +8,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+
 /**
  * Blockquote node spec.
  *
@@ -29,10 +31,10 @@ export const blockquoteNode: NodeSpec = {
   content: 'inline*',
   group: 'block',
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
   },
-  parseDOM: [{ tag: 'blockquote' }],
+  parseDOM: [{ tag: 'blockquote', getAttrs: (dom: HTMLElement) => getBlockIdAttrs(dom) }],
   toDOM(node: PMNode): DOMOutputSpec {
-    return ['blockquote', { class: 'openblock-blockquote', 'data-block-id': node.attrs.id }, 0];
+    return ['blockquote', { class: 'openblock-blockquote', ...blockIdToDOM(node) }, 0];
   },
 };

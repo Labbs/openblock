@@ -67,9 +67,23 @@ export interface LinkContent {
 }
 
 /**
+ * Hard break inline content.
+ *
+ * A line break within a text block (rendered as `<br>`).
+ *
+ * @example
+ * ```typescript
+ * const brk: HardBreakContent = { type: 'hardBreak' };
+ * ```
+ */
+export interface HardBreakContent {
+  type: 'hardBreak';
+}
+
+/**
  * Union of all inline content types.
  */
-export type InlineContent = StyledText | LinkContent;
+export type InlineContent = StyledText | LinkContent | HardBreakContent;
 
 /**
  * A block in the document.

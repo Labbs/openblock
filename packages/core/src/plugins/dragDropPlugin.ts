@@ -8,7 +8,7 @@
  * @module
  */
 
-import { Plugin, PluginKey, EditorState, TextSelection } from 'prosemirror-state';
+import { Plugin, PluginKey, EditorState, Selection } from 'prosemirror-state';
 import { Decoration, DecorationSet, EditorView } from 'prosemirror-view';
 import { Node as PMNode } from 'prosemirror-model';
 import { SLASH_MENU_PLUGIN_KEY } from './slashMenuPlugin';
@@ -187,6 +187,13 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
         const pos = parseInt(menu.dataset.blockPos || '0', 10);
         draggedBlockPos = pos;
 
+        // Mark the block as being dragged (enables the ob-block-dragging decoration)
+        editorView.dispatch(
+          editorView.state.tr.setMeta(DRAG_DROP_PLUGIN_KEY, {
+            dragging: pos,
+          })
+        );
+
         // Hide side menu during drag
         sideMenuEl?.classList.remove(`${sideMenuClass}--visible`);
 
@@ -277,16 +284,17 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
 
   // Cache for block positions to avoid repeated doc.descendants calls
   const blockPosCache: Map<string, number> = new Map();
-  let lastDocVersion: number = -1;
+  // ProseMirror docs are immutable: identity comparison reliably detects any
+  // change (including same-size replacements, moveBlock, setNodeMarkup, ...)
+  let cachedDoc: PMNode | null = null;
 
   /**
    * Update the block position cache when document changes.
    */
   function updateBlockPosCache(view: EditorView): void {
-    const docVersion = view.state.doc.content.size;
-    if (docVersion === lastDocVersion) return;
+    if (view.state.doc === cachedDoc) return;
 
-    lastDocVersion = docVersion;
+    cachedDoc = view.state.doc;
     blockPosCache.clear();
 
     view.state.doc.descendants((node: PMNode, pos: number) => {
@@ -330,8 +338,8 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
 
   // Event handlers stored for cleanup
   let handleMouseMove: ((event: MouseEvent) => void) | null = null;
-  let handleDragOver: ((event: DragEvent) => void) | null = null;
-  let handleDrop: ((event: DragEvent) => void) | null = null;
+  let handleDragMove: ((event: MouseEvent) => void) | null = null;
+  let handleDragEnd: (() => void) | null = null;
 
   // Timer for delayed hiding of side menu
   let hideMenuTimer: ReturnType<typeof setTimeout> | null = null;
@@ -432,7 +440,7 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
     });
 
     // Mouse move for drag - find drop target (custom drag implementation)
-    handleDragOver = ((event: MouseEvent) => {
+    handleDragMove = (event: MouseEvent) => {
       if (draggedBlockPos === null) return;
 
       // Get position from coordinates
@@ -508,10 +516,10 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
           );
         }
       }
-    }) as unknown as (event: DragEvent) => void;
+    };
 
     // Mouse up - drop the block
-    handleDrop = (() => {
+    handleDragEnd = () => {
       // Reset cursor
       document.body.style.cursor = '';
 
@@ -542,11 +550,11 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
       // Remove dragging class from handle
       const dragHandle = sideMenuEl?.querySelector(`.${handleClass}`);
       dragHandle?.classList.remove(`${handleClass}--dragging`);
-    }) as unknown as (event: DragEvent) => void;
+    };
 
     // Attach mouse event listeners to document for drag
-    document.addEventListener('mousemove', handleDragOver as unknown as (event: MouseEvent) => void);
-    document.addEventListener('mouseup', handleDrop as unknown as () => void);
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
   }
 
   return new Plugin<DragDropState>({
@@ -559,14 +567,18 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
       ensureSideMenu(view);
 
       // If parent wasn't available yet, try again after a frame
+      let ensureMenuRafId: number | null = null;
       if (!sideMenuEl) {
-        requestAnimationFrame(() => {
+        ensureMenuRafId = requestAnimationFrame(() => {
+          ensureMenuRafId = null;
           ensureSideMenu(view);
         });
       }
 
       return {
-        update(view) {
+        update(view, prevState) {
+          const docChanged = view.state.doc !== prevState.doc;
+
           // Update block position cache when document changes
           updateBlockPosCache(view);
 
@@ -574,18 +586,32 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
           ensureSideMenu(view);
 
           const state = DRAG_DROP_PLUGIN_KEY.getState(view.state);
-          updateSideMenuPosition(view, state?.hoveredBlockPos ?? null);
+          const prevPluginState = DRAG_DROP_PLUGIN_KEY.getState(prevState);
+
+          // Repositioning does DOM measurements (querySelector +
+          // getBoundingClientRect): skip when nothing relevant changed
+          const hoveredBlockPos = state?.hoveredBlockPos ?? null;
+          const prevHoveredBlockPos = prevPluginState?.hoveredBlockPos ?? null;
+          if (hoveredBlockPos === prevHoveredBlockPos && !docChanged) {
+            return;
+          }
+
+          updateSideMenuPosition(view, hoveredBlockPos);
         },
 
         destroy() {
+          if (ensureMenuRafId !== null) {
+            cancelAnimationFrame(ensureMenuRafId);
+            ensureMenuRafId = null;
+          }
           if (handleMouseMove) {
             view.dom.removeEventListener('mousemove', handleMouseMove);
           }
-          if (handleDragOver) {
-            document.removeEventListener('mousemove', handleDragOver as unknown as (event: MouseEvent) => void);
+          if (handleDragMove) {
+            document.removeEventListener('mousemove', handleDragMove);
           }
-          if (handleDrop) {
-            document.removeEventListener('mouseup', handleDrop as unknown as () => void);
+          if (handleDragEnd) {
+            document.removeEventListener('mouseup', handleDragEnd);
           }
           if (hideMenuTimer) {
             clearTimeout(hideMenuTimer);
@@ -595,11 +621,11 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
           sideMenuEl = null;
           editorView = null;
           handleMouseMove = null;
-          handleDragOver = null;
-          handleDrop = null;
+          handleDragMove = null;
+          handleDragEnd = null;
           draggedBlockPos = null;
           blockPosCache.clear();
-          lastDocVersion = -1;
+          cachedDoc = null;
         },
       };
     },
@@ -619,6 +645,18 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
         if (meta) {
           return { ...state, ...meta };
         }
+
+        // Keep stored positions valid when the document changes
+        if (tr.docChanged) {
+          return {
+            ...state,
+            dragging: state.dragging !== null ? tr.mapping.map(state.dragging) : null,
+            dropTarget: state.dropTarget !== null ? tr.mapping.map(state.dropTarget) : null,
+            hoveredBlockPos:
+              state.hoveredBlockPos !== null ? tr.mapping.map(state.hoveredBlockPos) : null,
+          };
+        }
+
         return state;
       },
     },
@@ -672,8 +710,11 @@ function handleAddBlockClick(pos: number, view: EditorView): void {
   // pos is the start of the block, pos + node.nodeSize - 1 is the end (before closing tag)
   const endOfBlockPos = pos + node.nodeSize - 1;
 
-  // Set selection to the end of the block
-  const tr = state.tr.setSelection(TextSelection.create(state.doc, endOfBlockPos));
+  // Set selection near the end of the block (handles atoms/nested blocks
+  // where an exact text selection at this position would be invalid)
+  const tr = state.tr.setSelection(
+    Selection.near(state.doc.resolve(endOfBlockPos), -1)
+  );
   view.dispatch(tr);
   view.focus();
 

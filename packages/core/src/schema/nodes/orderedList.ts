@@ -8,6 +8,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+
 /**
  * Ordered list node spec.
  *
@@ -32,7 +34,7 @@ export const orderedListNode: NodeSpec = {
   content: 'listItem+',
   group: 'block',
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
     start: { default: 1 },
   },
   parseDOM: [
@@ -40,14 +42,17 @@ export const orderedListNode: NodeSpec = {
       tag: 'ol',
       getAttrs(node) {
         const ol = node as HTMLElement;
-        return { start: ol.hasAttribute('start') ? parseInt(ol.getAttribute('start') ?? '1', 10) : 1 };
+        return {
+          ...getBlockIdAttrs(ol),
+          start: safeParseInt(ol.getAttribute('start'), 1),
+        };
       },
     },
   ],
   toDOM(node: PMNode): DOMOutputSpec {
     const attrs: Record<string, string> = {
       class: 'openblock-ordered-list',
-      'data-block-id': node.attrs.id,
+      ...blockIdToDOM(node),
     };
     if (node.attrs.start !== 1) {
       attrs.start = String(node.attrs.start);

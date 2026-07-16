@@ -8,6 +8,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+
 /**
  * Bullet list node spec.
  *
@@ -32,10 +34,10 @@ export const bulletListNode: NodeSpec = {
   content: 'listItem+',
   group: 'block',
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
   },
-  parseDOM: [{ tag: 'ul' }],
+  parseDOM: [{ tag: 'ul', getAttrs: (dom: HTMLElement) => getBlockIdAttrs(dom) }],
   toDOM(node: PMNode): DOMOutputSpec {
-    return ['ul', { class: 'openblock-bullet-list', 'data-block-id': node.attrs.id }, 0];
+    return ['ul', { class: 'openblock-bullet-list', ...blockIdToDOM(node) }, 0];
   },
 };

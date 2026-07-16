@@ -8,6 +8,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+
 /**
  * Divider node spec.
  *
@@ -27,10 +29,10 @@ export const dividerNode: NodeSpec = {
   // No content - this is a leaf node
   group: 'block',
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
   },
-  parseDOM: [{ tag: 'hr' }],
+  parseDOM: [{ tag: 'hr', getAttrs: (dom: HTMLElement) => getBlockIdAttrs(dom) }],
   toDOM(node: PMNode): DOMOutputSpec {
-    return ['hr', { class: 'openblock-divider', 'data-block-id': node.attrs.id }];
+    return ['hr', { class: 'openblock-divider', ...blockIdToDOM(node) }];
   },
 };

@@ -8,6 +8,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+
 /**
  * Code block node spec.
  *
@@ -32,32 +34,36 @@ export const codeBlockNode: NodeSpec = {
   group: 'block',
   // Code blocks don't allow marks - code is plain text
   marks: '',
-  // Treat as a single unit for cursor navigation
+  // Mark this node as code (affects e.g. cursor behavior and input rules)
   code: true,
-  // Preserve whitespace exactly as entered
+  // Keep this node as the boundary when its content is replaced
   defining: true,
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
     language: { default: '' },
   },
   parseDOM: [
     {
       tag: 'pre',
+      // Preserve whitespace exactly as written
       preserveWhitespace: 'full',
       getAttrs(node) {
         const pre = node as HTMLElement;
         const code = pre.querySelector('code');
         const lang = code?.getAttribute('data-language') || code?.className.match(/language-(\w+)/)?.[1] || '';
-        return { language: lang };
+        return { ...getBlockIdAttrs(pre), language: lang };
       },
     },
   ],
   toDOM(node: PMNode): DOMOutputSpec {
     const language = node.attrs.language || '';
+    const codeAttrs: Record<string, string> = language
+      ? { 'data-language': language, class: `language-${language}` }
+      : {};
     return [
       'pre',
-      { class: 'openblock-code-block', 'data-block-id': node.attrs.id },
-      ['code', { 'data-language': language, class: language ? `language-${language}` : '' }, 0],
+      { class: 'openblock-code-block', ...blockIdToDOM(node) },
+      ['code', codeAttrs, 0],
     ];
   },
 };

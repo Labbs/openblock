@@ -72,8 +72,12 @@ export interface BlockRenderProps<T extends PropSchema> {
   editor: OpenBlockEditor;
   /** Whether the editor is in editable mode */
   isEditable: boolean;
-  /** Content DOM element for inline content (only if content: 'inline') */
-  contentRef?: React.RefObject<HTMLDivElement>;
+  /**
+   * Ref to attach to the element that should host the editable inline
+   * content (only provided if content: 'inline'). Pass it as the `ref` of a
+   * container element: `<div ref={contentRef} />`.
+   */
+  contentRef?: React.Ref<HTMLDivElement>;
 }
 
 /**
@@ -231,6 +235,16 @@ export function createReactBlockSpec<T extends PropSchema>(
       reactContainer.className = 'openblock-react-container';
       dom.appendChild(reactContainer);
 
+      // Stable callback ref that attaches the ProseMirror-managed contentDOM
+      // to the element rendered by the React component. Created once per
+      // node view so React only invokes it on mount/unmount, not on every
+      // re-render.
+      const contentRefCallback: React.RefCallback<HTMLDivElement> = (el) => {
+        if (el && contentDOM && !el.contains(contentDOM)) {
+          el.appendChild(contentDOM);
+        }
+      };
+
       // Render function
       const renderReact = (currentNode: PMNode) => {
         const block = {
@@ -244,15 +258,13 @@ export function createReactBlockSpec<T extends PropSchema>(
           (block.props as Record<string, unknown>)[key] = currentNode.attrs[key];
         }
 
-        const contentRef = React.createRef<HTMLDivElement>();
-
         const element = (
           <BlockContext.Provider value={{ editor }}>
             <RenderComponent
               block={block}
               editor={editor}
               isEditable={editor.isEditable}
-              contentRef={content === 'inline' ? contentRef : undefined}
+              contentRef={content === 'inline' ? contentRefCallback : undefined}
             />
           </BlockContext.Provider>
         );
@@ -261,17 +273,6 @@ export function createReactBlockSpec<T extends PropSchema>(
           root = createRoot(reactContainer);
         }
         root.render(element);
-
-        // Append contentDOM after React renders if needed
-        if (content === 'inline' && contentDOM) {
-          const dom = contentDOM; // Capture in closure
-          requestAnimationFrame(() => {
-            const contentContainer = contentRef.current;
-            if (contentContainer && !contentContainer.contains(dom)) {
-              contentContainer.appendChild(dom);
-            }
-          });
-        }
       };
 
       // Initial render
@@ -286,18 +287,32 @@ export function createReactBlockSpec<T extends PropSchema>(
           return true;
         },
         destroy: () => {
-          if (root) {
-            root.unmount();
-            root = null;
+          const currentRoot = root;
+          root = null;
+          if (currentRoot) {
+            // Defer the unmount: ProseMirror may call destroy() while React
+            // is rendering, and unmounting a root synchronously during a
+            // render is not allowed.
+            queueMicrotask(() => currentRoot.unmount());
           }
         },
         stopEvent: (event: Event) => {
-          // Allow clicks and other events inside the block
-          return event.target !== dom;
+          const target = event.target as Node | null;
+          if (!target) return false;
+          // Never intercept events inside the editable content: ProseMirror
+          // must receive them for inline editing to work.
+          if (contentDOM && contentDOM.contains(target)) {
+            return false;
+          }
+          // Only stop events originating from the React-rendered UI so
+          // ProseMirror does not hijack interactions with it (buttons,
+          // inputs, ...).
+          return reactContainer.contains(target);
         },
-        ignoreMutation: () => {
-          // Ignore mutations from React
-          return true;
+        ignoreMutation: (mutation) => {
+          // Let ProseMirror observe mutations inside the editable content,
+          // ignore mutations caused by React in the rest of the node view.
+          return !contentDOM || !contentDOM.contains(mutation.target);
         },
       };
     };

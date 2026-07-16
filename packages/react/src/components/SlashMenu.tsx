@@ -96,17 +96,19 @@
  * - `embed`, `youtube` - Embeds
  */
 
-import React, { useEffect, useState, useCallback, useRef, useLayoutEffect, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   OpenBlockEditor,
   SLASH_MENU_PLUGIN_KEY,
-  SlashMenuState,
   SlashMenuItem,
   getDefaultSlashMenuItems,
   filterSlashMenuItems,
   executeSlashCommand,
   closeSlashMenu,
 } from '@labbs/openblock-core';
+import { usePluginState } from '../hooks/usePluginState';
+import { useFlipPosition } from '../hooks/useFlipPosition';
+import { QuoteIcon } from './icons';
 
 // Re-export SlashMenuItem for convenience
 export type { SlashMenuItem } from '@labbs/openblock-core';
@@ -122,6 +124,9 @@ export interface SlashMenuProps {
 
   /**
    * Replace all default items with custom items.
+   *
+   * When provided, this list is used as-is: `customItems`, `itemOrder` and
+   * `hideItems` are ignored (the list is still filtered by the typed query).
    * Use `customItems` instead if you want to add items while keeping defaults.
    */
   items?: SlashMenuItem[];
@@ -186,10 +191,7 @@ const Icons: Record<string, React.FC<{ className?: string }>> = {
     </svg>
   ),
   quote: ({ className }) => (
-    <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21" />
-      <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v4" />
-    </svg>
+    <QuoteIcon className={className} width="16" height="16" strokeWidth="2" />
   ),
   code: ({ className }) => (
     <svg className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -257,9 +259,8 @@ export function SlashMenu({
   renderItem,
   className,
 }: SlashMenuProps): React.ReactElement | null {
-  const [menuState, setMenuState] = useState<SlashMenuState | null>(null);
+  const menuState = usePluginState(editor, SLASH_MENU_PLUGIN_KEY);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [openUpward, setOpenUpward] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Build the list of all available items
@@ -302,49 +303,63 @@ export function SlashMenu({
     return mergedItems;
   }, [editor, items, customItems, itemOrder, hideItems]);
 
-  const filteredItems = menuState ? filterSlashMenuItems(allItems, menuState.query) : [];
+  const isActive = menuState?.active ?? false;
+  const query = isActive ? menuState?.query ?? '' : null;
 
-  // Subscribe to plugin state changes
+  const filteredItems = useMemo(
+    () => (menuState?.active ? filterSlashMenuItems(allItems, menuState.query) : []),
+    [allItems, menuState]
+  );
+
+  // Reset selection only when the menu opens/closes or the query changes
   useEffect(() => {
-    if (!editor || editor.isDestroyed) return;
+    setSelectedIndex(0);
+  }, [isActive, query]);
 
-    const updateState = () => {
-      const state = SLASH_MENU_PLUGIN_KEY.getState(editor.pm.state);
-      setMenuState(state ?? null);
-      setSelectedIndex(0); // Reset selection when menu opens/query changes
-    };
+  // Handle item selection
+  const handleSelect = useCallback(
+    (item: SlashMenuItem) => {
+      if (!editor || editor.isDestroyed || !menuState) return;
+      executeSlashCommand(editor.pm.view, menuState, item.action);
+      editor.pm.view.focus();
+    },
+    [editor, menuState]
+  );
 
-    // Initial state
-    updateState();
-
-    // Subscribe to transactions
-    const unsubscribe = editor.on('transaction', updateState);
-    return unsubscribe;
-  }, [editor]);
+  // Mirror moving values into refs so the keydown listener below stays
+  // stable (attached once per menu activation instead of on every render).
+  const filteredItemsRef = useRef(filteredItems);
+  filteredItemsRef.current = filteredItems;
+  const selectedIndexRef = useRef(selectedIndex);
+  selectedIndexRef.current = selectedIndex;
+  const handleSelectRef = useRef(handleSelect);
+  handleSelectRef.current = handleSelect;
 
   // Handle keyboard navigation
   useEffect(() => {
-    if (!editor || editor.isDestroyed || !menuState?.active) return;
+    if (!editor || editor.isDestroyed || !isActive) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault();
           event.stopPropagation();
-          setSelectedIndex((i) => Math.min(i + 1, filteredItems.length - 1));
+          setSelectedIndex((i) => Math.min(i + 1, filteredItemsRef.current.length - 1));
           break;
         case 'ArrowUp':
           event.preventDefault();
           event.stopPropagation();
           setSelectedIndex((i) => Math.max(i - 1, 0));
           break;
-        case 'Enter':
+        case 'Enter': {
           event.preventDefault();
           event.stopPropagation();
-          if (filteredItems[selectedIndex]) {
-            handleSelect(filteredItems[selectedIndex]);
+          const item = filteredItemsRef.current[selectedIndexRef.current];
+          if (item) {
+            handleSelectRef.current(item);
           }
           break;
+        }
         case 'Escape':
           event.preventDefault();
           event.stopPropagation();
@@ -357,31 +372,16 @@ export function SlashMenu({
     const editorElement = editor.pm.view.dom;
     editorElement.addEventListener('keydown', handleKeyDown, true);
     return () => editorElement.removeEventListener('keydown', handleKeyDown, true);
-  }, [menuState?.active, filteredItems, selectedIndex, editor]);
-
-  // Handle item selection
-  const handleSelect = useCallback(
-    (item: SlashMenuItem) => {
-      if (!editor || editor.isDestroyed || !menuState) return;
-      executeSlashCommand(editor.pm.view, menuState, item.action);
-      editor.pm.view.focus();
-    },
-    [editor, menuState]
-  );
+  }, [editor, isActive]);
 
   // Determine if menu should open upward based on available space
-  useLayoutEffect(() => {
-    if (!menuState?.active || !menuState.coords || !menuRef.current) {
-      return;
-    }
-
-    const menuHeight = menuRef.current.offsetHeight || 300; // Estimate if not yet rendered
-    const spaceBelow = window.innerHeight - menuState.coords.bottom - 8;
-    const spaceAbove = menuState.coords.top - 8;
-
-    // Open upward if not enough space below but enough above
-    setOpenUpward(spaceBelow < menuHeight && spaceAbove > spaceBelow);
-  }, [menuState?.active, menuState?.coords, filteredItems.length]);
+  const openUpward = useFlipPosition({
+    active: !!(menuState?.active && menuState.coords),
+    elementRef: menuRef,
+    getAnchorRect: () => menuState?.coords ?? null,
+    estimatedHeight: 300,
+    recomputeDeps: [menuState?.coords, filteredItems.length],
+  });
 
   // Don't render if menu is not active
   if (!menuState?.active || !menuState.coords) {

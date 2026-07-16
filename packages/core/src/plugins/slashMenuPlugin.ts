@@ -7,7 +7,7 @@
  * @module
  */
 
-import { Plugin, PluginKey, EditorState, TextSelection } from 'prosemirror-state';
+import { Plugin, PluginKey, EditorState, Selection, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { setBlockType } from 'prosemirror-commands';
 
@@ -156,26 +156,35 @@ export function createSlashMenuPlugin(config: SlashMenuConfig = {}): Plugin {
           return { active: false, query: '', triggerPos: 0, coords: null };
         }
 
+        // Remap the trigger position through document changes
+        const triggerPos = tr.docChanged ? tr.mapping.map(state.triggerPos) : state.triggerPos;
+
         const { $from } = newEditorState.selection;
-        const textBefore = $from.parent.textContent.slice(0, $from.parentOffset);
 
-        // Find the trigger position relative to current text
-        const triggerIndex = textBefore.lastIndexOf(trigger);
+        // Cursor must be in the same text block as the trigger, after it
+        if (triggerPos < $from.start() || $from.pos < triggerPos + trigger.length) {
+          return { active: false, query: '', triggerPos: 0, coords: null };
+        }
 
-        if (triggerIndex === -1) {
+        // Verify the trigger character is still present at the trigger position
+        const triggerText = newEditorState.doc.textBetween(
+          triggerPos,
+          triggerPos + trigger.length
+        );
+        if (triggerText !== trigger) {
           // Trigger was deleted - close menu
           return { active: false, query: '', triggerPos: 0, coords: null };
         }
 
-        // Extract query (text after trigger)
-        const query = textBefore.slice(triggerIndex + trigger.length);
+        // The query is the text between the trigger and the cursor
+        const query = newEditorState.doc.textBetween(triggerPos + trigger.length, $from.pos);
 
         // Close if query contains spaces (user probably moved on)
         if (query.includes(' ')) {
           return { active: false, query: '', triggerPos: 0, coords: null };
         }
 
-        return { ...state, query };
+        return { ...state, triggerPos, query };
       },
     },
 
@@ -306,18 +315,24 @@ export function executeSlashCommand(
 function replaceCurrentBlock(view: EditorView, node: ReturnType<typeof view.state.schema.nodes.paragraph.create>): void {
   const { $from } = view.state.selection;
 
-  // Find the parent block (depth 1 is the direct child of doc)
-  const blockDepth = $from.depth > 0 ? 1 : 0;
-  const blockStart = $from.start(blockDepth);
-  const blockEnd = $from.end(blockDepth);
+  // Target the textblock that actually contains the cursor, not the
+  // top-level child of doc: inside a column, blockquote or list a
+  // hard-coded depth 1 would replace the whole container and lose content.
+  const depth = $from.depth;
+  if (depth === 0) {
+    view.dispatch(view.state.tr.replaceSelectionWith(node));
+    return;
+  }
 
-  // Replace the entire block with the new node
+  const blockStart = $from.before(depth);
+  const blockEnd = $from.after(depth);
+
+  // Replace only the cursor's parent block with the new node
   const tr = view.state.tr;
-  tr.replaceWith(blockStart - 1, blockEnd + 1, node);
+  tr.replaceWith(blockStart, blockEnd, node);
 
   // Position cursor inside the new block
-  const newPos = blockStart;
-  tr.setSelection(TextSelection.create(tr.doc, newPos));
+  tr.setSelection(Selection.near(tr.doc.resolve(blockStart + 1)));
 
   view.dispatch(tr);
 }
@@ -584,6 +599,28 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
 
   // Tables
   if (schema.nodes.table && schema.nodes.tableRow && schema.nodes.tableCell) {
+    const createTableAction =
+      (rowCount: number, colCount: number) =>
+      (view: EditorView, _state: SlashMenuState) => {
+        const createRow = () => {
+          const cells = [];
+          for (let i = 0; i < colCount; i++) {
+            cells.push(
+              schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
+            );
+          }
+          return schema.nodes.tableRow.create(null, cells);
+        };
+
+        const rows = [];
+        for (let i = 0; i < rowCount; i++) {
+          rows.push(createRow());
+        }
+
+        const table = schema.nodes.table.create(null, rows);
+        view.dispatch(view.state.tr.replaceSelectionWith(table));
+      };
+
     items.push(
       {
         id: 'table',
@@ -592,25 +629,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'table',
         keywords: ['grid', 'spreadsheet', 'rows', 'columns'],
         group: 'Layout',
-        action: (view, _state) => {
-          const createRow = (colCount: number) => {
-            const cells = [];
-            for (let i = 0; i < colCount; i++) {
-              cells.push(
-                schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
-              );
-            }
-            return schema.nodes.tableRow.create(null, cells);
-          };
-
-          const rows = [];
-          for (let i = 0; i < 3; i++) {
-            rows.push(createRow(3));
-          }
-
-          const table = schema.nodes.table.create(null, rows);
-          view.dispatch(view.state.tr.replaceSelectionWith(table));
-        },
+        action: createTableAction(3, 3),
       },
       {
         id: 'table2x2',
@@ -619,25 +638,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'table',
         keywords: ['grid', 'small', 'simple'],
         group: 'Layout',
-        action: (view, _state) => {
-          const createRow = (colCount: number) => {
-            const cells = [];
-            for (let i = 0; i < colCount; i++) {
-              cells.push(
-                schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
-              );
-            }
-            return schema.nodes.tableRow.create(null, cells);
-          };
-
-          const rows = [];
-          for (let i = 0; i < 2; i++) {
-            rows.push(createRow(2));
-          }
-
-          const table = schema.nodes.table.create(null, rows);
-          view.dispatch(view.state.tr.replaceSelectionWith(table));
-        },
+        action: createTableAction(2, 2),
       },
       {
         id: 'table4x4',
@@ -646,25 +647,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'table',
         keywords: ['grid', 'large', 'big'],
         group: 'Layout',
-        action: (view, _state) => {
-          const createRow = (colCount: number) => {
-            const cells = [];
-            for (let i = 0; i < colCount; i++) {
-              cells.push(
-                schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
-              );
-            }
-            return schema.nodes.tableRow.create(null, cells);
-          };
-
-          const rows = [];
-          for (let i = 0; i < 4; i++) {
-            rows.push(createRow(4));
-          }
-
-          const table = schema.nodes.table.create(null, rows);
-          view.dispatch(view.state.tr.replaceSelectionWith(table));
-        },
+        action: createTableAction(4, 4),
       }
     );
   }

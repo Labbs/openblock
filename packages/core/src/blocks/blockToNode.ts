@@ -48,16 +48,21 @@ export function blockToNode(schema: Schema, block: Block): PMNode {
     ...block.props,
   };
 
-  // Handle container blocks with children (lists, columns, etc.)
-  if (block.children && block.children.length > 0) {
-    const childNodes = block.children.map((child) => blockToNode(schema, child));
-    return nodeType.create(attrs, childNodes);
+  // Empty children arrays are treated as absent (avoids invalid empty containers)
+  const children = block.children && block.children.length > 0 ? block.children : null;
+
+  // Handle list items specially - they need a paragraph wrapper for inline content,
+  // followed by any nested blocks (sub-lists) as siblings of that paragraph
+  if (block.type === 'listItem') {
+    const paragraph = schema.node('paragraph', null, inlineContentToNodes(schema, block.content || []));
+    const childNodes = children ? children.map((child) => blockToNode(schema, child)) : [];
+    return nodeType.create(attrs, [paragraph, ...childNodes]);
   }
 
-  // Handle list items specially - they need a paragraph wrapper for inline content
-  if (block.type === 'listItem' && block.content) {
-    const paragraph = schema.node('paragraph', null, inlineContentToNodes(schema, block.content));
-    return nodeType.create(attrs, [paragraph]);
+  // Handle container blocks with children (lists, columns, etc.)
+  if (children) {
+    const childNodes = children.map((child) => blockToNode(schema, child));
+    return nodeType.create(attrs, childNodes);
   }
 
   // Handle check list items - they have inline content directly
@@ -71,7 +76,7 @@ export function blockToNode(schema: Schema, block: Block): PMNode {
   }
 
   // Handle table cells - they need block content (default to paragraph if only inline content)
-  if ((block.type === 'tableCell' || block.type === 'tableHeader') && block.content && !block.children) {
+  if ((block.type === 'tableCell' || block.type === 'tableHeader') && block.content && !children) {
     const paragraph = schema.node('paragraph', null, inlineContentToNodes(schema, block.content));
     return nodeType.create(attrs, [paragraph]);
   }
@@ -99,15 +104,36 @@ export function blockToNode(schema: Schema, block: Block): PMNode {
  * @returns Array of ProseMirror nodes
  */
 export function inlineContentToNodes(schema: Schema, content: InlineContent[]): PMNode[] {
-  return content.map((item) => {
-    if (item.type === 'text') {
-      const marks = stylesToMarks(schema, item.styles);
-      return schema.text(item.text, marks);
-    }
+  const nodes: PMNode[] = [];
 
-    // Future: Handle link content and other inline types
-    return schema.text('');
-  });
+  for (const item of content) {
+    if (item.type === 'text') {
+      // ProseMirror does not allow empty text nodes
+      if (!item.text) {
+        continue;
+      }
+      const marks = stylesToMarks(schema, item.styles);
+      nodes.push(schema.text(item.text, marks));
+    } else if (item.type === 'link') {
+      const linkMark = schema.marks.link?.create({
+        href: item.href,
+        title: item.title ?? null,
+        target: item.target ?? null,
+      });
+      for (const child of item.content) {
+        // ProseMirror does not allow empty text nodes
+        if (!child.text) {
+          continue;
+        }
+        const marks = stylesToMarks(schema, child.styles);
+        nodes.push(schema.text(child.text, linkMark ? [...marks, linkMark] : marks));
+      }
+    } else if (item.type === 'hardBreak' && schema.nodes.hardBreak) {
+      nodes.push(schema.nodes.hardBreak.create());
+    }
+  }
+
+  return nodes;
 }
 
 /**
@@ -134,6 +160,12 @@ export function stylesToMarks(schema: Schema, styles: TextStyles): readonly Mark
   }
   if (styles.code && schema.marks.code) {
     marks.push(schema.marks.code.create());
+  }
+  if (styles.textColor && schema.marks.textColor) {
+    marks.push(schema.marks.textColor.create({ color: styles.textColor }));
+  }
+  if (styles.backgroundColor && schema.marks.backgroundColor) {
+    marks.push(schema.marks.backgroundColor.create({ color: styles.backgroundColor }));
   }
 
   return marks;

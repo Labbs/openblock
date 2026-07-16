@@ -29,7 +29,6 @@ import { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 export const tableNode: NodeSpec = {
   group: 'block',
   content: 'tableRow+',
-  tableRole: 'table',
   defining: true,
   isolating: true,
 

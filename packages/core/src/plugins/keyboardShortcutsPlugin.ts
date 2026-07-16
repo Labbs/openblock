@@ -203,10 +203,22 @@ function resolveAction(
           const range = $from.blockRange($to);
           if (!range) return false;
 
-          const tr = state.tr;
-          const checkListItem = schema.nodes.checkListItem.create({ checked: false }, $from.parent.content);
-          const checkList = schema.nodes.checkList.create(null, [checkListItem]);
-          tr.replaceRangeWith(range.start, range.end, checkList);
+          // Create one checkListItem per block in the range so multi-block
+          // selections keep the content of every block (not just the first)
+          const items = [];
+          for (let i = range.startIndex; i < range.endIndex; i++) {
+            const child = range.parent.child(i);
+            const content = child.isTextblock
+              ? child.content
+              : child.textContent
+                ? state.schema.text(child.textContent)
+                : undefined;
+            items.push(schema.nodes.checkListItem.create({ checked: false }, content));
+          }
+          if (items.length === 0) return false;
+
+          const checkList = schema.nodes.checkList.create(null, items);
+          const tr = state.tr.replaceRangeWith(range.start, range.end, checkList);
 
           if (dispatch) dispatch(tr);
           return true;

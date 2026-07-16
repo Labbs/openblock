@@ -6,9 +6,9 @@
  * @module
  */
 
-import type { Plugin } from 'prosemirror-state';
+import type { Plugin, Transaction } from 'prosemirror-state';
 import type { NodeViewConstructor } from 'prosemirror-view';
-import type { NodeSpec } from 'prosemirror-model';
+import type { NodeSpec, MarkSpec } from 'prosemirror-model';
 import type { Block } from '../blocks/types';
 import type { InputRulesConfig } from '../plugins/inputRules';
 
@@ -49,7 +49,7 @@ export interface EditorEvents {
   /** Editor blurred */
   blur: undefined;
   /** Transaction applied */
-  transaction: { transaction: unknown };
+  transaction: { transaction: Transaction };
 }
 
 /**
@@ -157,6 +157,12 @@ export interface EditorConfig {
    * Keys are node type names, values are ProseMirror NodeSpec objects.
    */
   customNodes?: Record<string, NodeSpec>;
+
+  /**
+   * Custom mark specifications to add to the schema.
+   * Keys are mark type names, values are ProseMirror MarkSpec objects.
+   */
+  customMarks?: Record<string, MarkSpec>;
 
   /**
    * Direct ProseMirror configuration.

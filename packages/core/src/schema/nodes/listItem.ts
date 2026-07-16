@@ -8,6 +8,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+
 /**
  * List item node spec.
  *
@@ -40,12 +42,12 @@ export const listItemNode: NodeSpec = {
   // Can contain a paragraph followed by optional nested lists
   content: 'paragraph block*',
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
   },
   // Allow list items to define their own boundary for operations
   defining: true,
-  parseDOM: [{ tag: 'li' }],
+  parseDOM: [{ tag: 'li', getAttrs: (dom: HTMLElement) => getBlockIdAttrs(dom) }],
   toDOM(node: PMNode): DOMOutputSpec {
-    return ['li', { class: 'openblock-list-item', 'data-block-id': node.attrs.id }, 0];
+    return ['li', { class: 'openblock-list-item', ...blockIdToDOM(node) }, 0];
   },
 };

@@ -177,11 +177,13 @@ export function dividerRule(nodeType: NodeType): InputRule {
  * @returns Input rule for bold
  */
 export function boldRule(markType: MarkType): InputRule {
-  // Match **text** or __text__ (non-greedy, at least 1 char inside)
+  // Match **text** or __text__ (at least 1 char inside).
+  // The closing delimiter is backreferenced so mixed pairs
+  // like **text__ are rejected.
   return new InputRule(
-    /(?:\*\*|__)([^*_]+)(?:\*\*|__)$/,
+    /(\*\*|__)([^*_]+)\1$/,
     (state, match, start, end) => {
-      const text = match[1];
+      const text = match[2];
       if (!text) return null;
 
       const tr = state.tr;

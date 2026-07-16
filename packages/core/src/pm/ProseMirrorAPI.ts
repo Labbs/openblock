@@ -482,10 +482,16 @@ export class ProseMirrorAPI {
   }
 
   /**
-   * Remove a plugin
+   * Remove a plugin, by its PluginKey or by instance.
+   *
+   * Passing the Plugin instance is the only way to remove a plugin that
+   * was created without a PluginKey.
    */
-  removePlugin(pluginKey: PluginKey): void {
-    const plugins = this.state.plugins.filter((p) => p.spec.key !== pluginKey);
+  removePlugin(pluginOrKey: PluginKey | Plugin): void {
+    const plugins =
+      pluginOrKey instanceof Plugin
+        ? this.state.plugins.filter((p) => p !== pluginOrKey)
+        : this.state.plugins.filter((p) => p.spec.key !== pluginOrKey);
     const newState = this.state.reconfigure({ plugins });
     this.view.updateState(newState);
   }
@@ -567,12 +573,8 @@ export class ProseMirrorAPI {
    * Create a slice from nodes
    */
   createSlice(content: PMNode | PMNode[] | Fragment, openStart = 0, openEnd = 0): Slice {
-    const fragment = Array.isArray(content)
-      ? Fragment.from(content)
-      : content instanceof Fragment
-        ? content
-        : Fragment.from(content);
-    return new Slice(fragment, openStart, openEnd);
+    // Fragment.from already accepts a node, an array of nodes, or a Fragment
+    return new Slice(Fragment.from(content), openStart, openEnd);
   }
 
   /**
@@ -612,12 +614,9 @@ export class ProseMirrorAPI {
 
     if (content instanceof Slice) {
       tr.replaceSelection(content);
-    } else if (content instanceof Fragment) {
-      tr.replaceSelection(new Slice(content, 0, 0));
-    } else if (Array.isArray(content)) {
-      tr.replaceSelection(new Slice(Fragment.from(content), 0, 0));
     } else {
-      tr.replaceSelectionWith(content);
+      // Fragment.from accepts a node, an array of nodes, or a Fragment
+      tr.replaceSelection(new Slice(Fragment.from(content), 0, 0));
     }
 
     this.dispatch(tr);
@@ -628,16 +627,14 @@ export class ProseMirrorAPI {
   // ===========================================================================
 
   /**
-   * Iterate over all nodes in the document
+   * Iterate over all nodes in the document (deep traversal).
    *
    * Callback receives node, position, parent, and index.
    */
   forEach(
     callback: (node: PMNode, pos: number, parent: PMNode | null, index: number) => boolean | void
   ): void {
-    this.doc.descendants((node, pos, parent, index) => {
-      return callback(node, pos, parent, index);
-    });
+    this.doc.descendants(callback);
   }
 
   /**

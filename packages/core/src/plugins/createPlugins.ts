@@ -150,21 +150,62 @@ export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
   const { schema, toggleMark, inputRules, dragDrop, slashMenu, bubbleMenu, multiBlockSelection, table, keyboardShortcuts, checklist, mediaMenu, additionalPlugins = [] } = options;
   const includeHistory = options.history !== false;
 
-  // Create slash menu plugin early so we can add it before baseKeymap
-  const slashMenuPlugin = slashMenu !== false
-    ? createSlashMenuPlugin(typeof slashMenu === 'object' ? slashMenu : {})
-    : null;
+  // The plugin array is assembled from explicit, ordered sections.
+  // Order matters for key handling: plugins listed before keymap(baseKeymap)
+  // get to handle key events (Enter, Mod-A, ...) before the base commands.
 
-  const plugins: Plugin[] = [
-    // History for undo/redo (can be disabled for y.js collaboration)
-    ...(includeHistory ? [history()] : []),
+  // --- Section 1: history ------------------------------------------------
+  // Can be disabled for y.js collaboration
+  const historyPlugins: Plugin[] = includeHistory ? [history()] : [];
 
-    // Slash menu plugin must come before baseKeymap to handle Enter when menu is active
-    ...(slashMenuPlugin ? [slashMenuPlugin] : []),
+  // --- Section 2: plugins that must run BEFORE baseKeymap ----------------
+  const beforeBaseKeymap: Plugin[] = [];
 
-    // Checklist plugin must come before baseKeymap to handle Enter/Shift+Enter in checklists
-    ...(checklist !== false ? [createChecklistPlugin(typeof checklist === 'object' ? checklist : {})] : []),
+  // Slash menu: handles Escape (and lets the menu intercept Enter) while active
+  if (slashMenu !== false) {
+    beforeBaseKeymap.push(createSlashMenuPlugin(typeof slashMenu === 'object' ? slashMenu : {}));
+  }
 
+  // Checklist: handles Enter/Shift+Enter inside checklists
+  if (checklist !== false) {
+    beforeBaseKeymap.push(createChecklistPlugin(typeof checklist === 'object' ? checklist : {}));
+  }
+
+  // Multi-block selection: must see Mod-A/Escape/Delete before baseKeymap,
+  // otherwise selectAll consumes Mod-A and "select all blocks" is unreachable
+  if (multiBlockSelection !== false) {
+    const multiBlockConfig = typeof multiBlockSelection === 'object' ? multiBlockSelection : {};
+    beforeBaseKeymap.push(createMultiBlockSelectionPlugin(multiBlockConfig));
+  }
+
+  // Table editing: Tab navigation must win over list indentation shortcuts
+  if (table !== false) {
+    beforeBaseKeymap.push(createTablePlugin(typeof table === 'object' ? table : {}));
+  }
+
+  // Keyboard shortcuts (formatting, undo/redo, block types)
+  if (schema && keyboardShortcuts !== false) {
+    const keyboardConfig = typeof keyboardShortcuts === 'object' ? keyboardShortcuts : {};
+    beforeBaseKeymap.push(createKeyboardShortcutsPlugin(schema, keyboardConfig));
+  } else if (toggleMark) {
+    // Fallback: if no schema but toggleMark is provided, use the old formatting keymap
+    if (includeHistory) {
+      // Only bind undo/redo when history is enabled
+      beforeBaseKeymap.push(keymap({
+        'Mod-z': undo,
+        'Mod-y': redo,
+        'Mod-Shift-z': redo,
+      }));
+    }
+    beforeBaseKeymap.push(keymap({
+      'Mod-b': () => toggleMark('bold'),
+      'Mod-i': () => toggleMark('italic'),
+      'Mod-u': () => toggleMark('underline'),
+    }));
+  }
+
+  // --- Section 3: base editing behavior ----------------------------------
+  const basePlugins: Plugin[] = [
     // Standard editing commands
     keymap(baseKeymap),
 
@@ -178,68 +219,37 @@ export function createPlugins(options: CreatePluginsOptions = {}): Plugin[] {
     createBlockIdPlugin(),
   ];
 
-  // Add keyboard shortcuts plugin (includes formatting, undo/redo, block type shortcuts)
-  if (schema && keyboardShortcuts !== false) {
-    const keyboardConfig = typeof keyboardShortcuts === 'object' ? keyboardShortcuts : {};
-    plugins.splice(2, 0, createKeyboardShortcutsPlugin(schema, keyboardConfig));
-  } else if (toggleMark) {
-    // Fallback: if no schema but toggleMark is provided, use the old formatting keymap
-    plugins.splice(2, 0, keymap({
-      'Mod-b': () => toggleMark('bold'),
-      'Mod-i': () => toggleMark('italic'),
-      'Mod-u': () => toggleMark('underline'),
-    }));
-    // Also add undo/redo if no keyboard shortcuts plugin
-    plugins.splice(2, 0, keymap({
-      'Mod-z': undo,
-      'Mod-y': redo,
-      'Mod-Shift-z': redo,
-    }));
-  }
+  // --- Section 4: enhancements (order-insensitive) ------------------------
+  const enhancementPlugins: Plugin[] = [];
 
-  // Add input rules for markdown shortcuts (requires schema)
+  // Input rules for markdown shortcuts (requires schema)
   if (schema && inputRules !== false) {
     const rulesConfig = typeof inputRules === 'object' ? inputRules : {};
-    plugins.push(createInputRulesPlugin(schema, rulesConfig));
+    enhancementPlugins.push(createInputRulesPlugin(schema, rulesConfig));
   }
 
-  // Add drag & drop plugin
+  // Drag & drop
   if (dragDrop !== false) {
     const dragDropConfig = typeof dragDrop === 'object' ? dragDrop : {};
-    plugins.push(createDragDropPlugin(dragDropConfig));
+    enhancementPlugins.push(createDragDropPlugin(dragDropConfig));
   }
 
-  // Note: Slash menu plugin is added earlier in the plugin array
-  // to ensure it handles Enter before baseKeymap
-
-  // Add bubble menu plugin
+  // Bubble menu (formatting toolbar on selection)
   if (bubbleMenu !== false) {
     const bubbleMenuConfig = typeof bubbleMenu === 'object' ? bubbleMenu : {};
-    plugins.push(createBubbleMenuPlugin(bubbleMenuConfig));
+    enhancementPlugins.push(createBubbleMenuPlugin(bubbleMenuConfig));
   }
 
-  // Add multi-block selection plugin
-  if (multiBlockSelection !== false) {
-    const multiBlockConfig = typeof multiBlockSelection === 'object' ? multiBlockSelection : {};
-    plugins.push(createMultiBlockSelectionPlugin(multiBlockConfig));
-  }
-
-  // Add table editing plugin
-  if (table !== false) {
-    const tableConfig = typeof table === 'object' ? table : {};
-    plugins.push(createTablePlugin(tableConfig));
-  }
-
-  // Note: Checklist plugin is added earlier in the plugin array
-  // to ensure it handles Enter/Shift+Enter before baseKeymap
-
-  // Add media menu plugin (image/embed selection toolbar)
+  // Media menu (image/embed selection toolbar)
   if (mediaMenu !== false) {
-    plugins.push(createMediaMenuPlugin());
+    enhancementPlugins.push(createMediaMenuPlugin());
   }
 
-  // Add user plugins
-  plugins.push(...additionalPlugins);
-
-  return plugins;
+  return [
+    ...historyPlugins,
+    ...beforeBaseKeymap,
+    ...basePlugins,
+    ...enhancementPlugins,
+    ...additionalPlugins,
+  ];
 }

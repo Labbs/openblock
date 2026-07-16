@@ -20,6 +20,8 @@
 
 import { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+
 /**
  * Column node spec for ProseMirror.
  *
@@ -43,11 +45,9 @@ export const columnNode: NodeSpec = {
     {
       tag: 'div[data-column]',
       getAttrs(dom: HTMLElement): Record<string, unknown> {
-        const width = dom.getAttribute('data-width');
-        const id = dom.getAttribute('data-block-id');
         return {
-          id: id || null,
-          width: width ? parseInt(width, 10) : 50,
+          ...getBlockIdAttrs(dom),
+          width: safeParseInt(dom.getAttribute('data-width'), 50),
         };
       },
     },
@@ -59,11 +59,8 @@ export const columnNode: NodeSpec = {
       'data-width': String(node.attrs.width),
       class: 'ob-column',
       style: `flex: ${node.attrs.width} 0 0; min-width: 0;`,
+      ...blockIdToDOM(node),
     };
-
-    if (node.attrs.id) {
-      attrs['data-block-id'] = node.attrs.id;
-    }
 
     return ['div', attrs, 0];
   },

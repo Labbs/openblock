@@ -6,8 +6,14 @@
  * @module
  */
 
-import { Plugin, TextSelection } from 'prosemirror-state';
+import { Plugin, PluginKey, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
+import type { Node as PMNode, ResolvedPos } from 'prosemirror-model';
+
+/**
+ * Plugin key for the checklist plugin.
+ */
+export const CHECKLIST_PLUGIN_KEY = new PluginKey('checklist');
 
 /**
  * Configuration for the checklist plugin.
@@ -20,6 +26,24 @@ export interface ChecklistPluginConfig {
 }
 
 /**
+ * Walk up from a resolved position to find the enclosing checkListItem.
+ *
+ * @param $pos - The resolved position to start from
+ * @returns The checkListItem node, its position and depth, or null
+ */
+function findCheckListItem(
+  $pos: ResolvedPos
+): { node: PMNode; pos: number; depth: number } | null {
+  for (let depth = $pos.depth; depth >= 1; depth--) {
+    const node = $pos.node(depth);
+    if (node.type.name === 'checkListItem') {
+      return { node, pos: $pos.before(depth), depth };
+    }
+  }
+  return null;
+}
+
+/**
  * Creates a plugin that handles checkbox interactions in check lists.
  *
  * @param config - Configuration options
@@ -27,6 +51,8 @@ export interface ChecklistPluginConfig {
  */
 export function createChecklistPlugin(config: ChecklistPluginConfig = {}): Plugin {
   return new Plugin({
+    key: CHECKLIST_PLUGIN_KEY,
+
     props: {
       handleKeyDown(view: EditorView, event: KeyboardEvent): boolean {
         const { state } = view;
@@ -34,18 +60,10 @@ export function createChecklistPlugin(config: ChecklistPluginConfig = {}): Plugi
         const { $from } = selection;
 
         // Check if we're inside a checkListItem
-        let checkListItemDepth: number | null = null;
-        for (let depth = $from.depth; depth >= 0; depth--) {
-          if ($from.node(depth).type.name === 'checkListItem') {
-            checkListItemDepth = depth;
-            break;
-          }
-        }
+        const itemInfo = findCheckListItem($from);
+        if (!itemInfo) return false;
 
-        if (checkListItemDepth === null) return false;
-
-        const checkListItem = $from.node(checkListItemDepth);
-        const checkListItemPos = $from.before(checkListItemDepth);
+        const { node: checkListItem, pos: checkListItemPos, depth: checkListItemDepth } = itemInfo;
 
         // Shift+Enter: Insert hard break (soft line break within the item)
         if (event.key === 'Enter' && event.shiftKey) {
@@ -129,20 +147,10 @@ export function createChecklistPlugin(config: ChecklistPluginConfig = {}): Plugi
 
             // Resolve position and find the check list item node
             const $pos = view.state.doc.resolve(pos);
-            let checkListItemPos: number | null = null;
-            let checkListItemNode = null;
+            const itemInfo = findCheckListItem($pos);
+            if (!itemInfo) return false;
 
-            // Walk up the node tree to find the checkListItem node
-            for (let depth = $pos.depth; depth >= 0; depth--) {
-              const node = $pos.node(depth);
-              if (node.type.name === 'checkListItem') {
-                checkListItemPos = $pos.before(depth);
-                checkListItemNode = node;
-                break;
-              }
-            }
-
-            if (checkListItemPos === null || !checkListItemNode) return false;
+            const { node: checkListItemNode, pos: checkListItemPos } = itemInfo;
 
             // Toggle the checked state
             const newChecked = !checkListItemNode.attrs.checked;

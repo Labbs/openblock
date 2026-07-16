@@ -33,5 +33,7 @@ export default defineConfig({
     },
     sourcemap: true,
     minify: false,
+    // Minify the CSS inlined by `editor.css?inline` (JS stays unminified)
+    cssMinify: true,
   },
 });

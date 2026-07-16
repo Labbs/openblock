@@ -8,6 +8,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+
 /**
  * Valid text alignment values.
  */
@@ -34,7 +36,7 @@ export const paragraphNode: NodeSpec = {
   content: 'inline*',
   group: 'block',
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
     textAlign: { default: 'left' },
   },
   parseDOM: [{
@@ -42,12 +44,13 @@ export const paragraphNode: NodeSpec = {
     getAttrs(dom) {
       const element = dom as HTMLElement;
       return {
+        ...getBlockIdAttrs(element),
         textAlign: element.style.textAlign || 'left',
       };
     },
   }],
   toDOM(node: PMNode): DOMOutputSpec {
-    const attrs: Record<string, string> = { 'data-block-id': node.attrs.id };
+    const attrs: Record<string, string> = { ...blockIdToDOM(node) };
     if (node.attrs.textAlign && node.attrs.textAlign !== 'left') {
       attrs.style = `text-align: ${node.attrs.textAlign}`;
     }

@@ -11,6 +11,7 @@ export type {
   TextStyles,
   StyledText,
   LinkContent,
+  HardBreakContent,
   InlineContent,
   Block,
   PartialBlock,

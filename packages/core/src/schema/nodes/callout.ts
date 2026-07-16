@@ -9,6 +9,8 @@
 
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
+import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+
 /**
  * Available callout types/variants.
  */
@@ -35,7 +37,7 @@ export const calloutNode: NodeSpec = {
   content: 'inline*',
   group: 'block',
   attrs: {
-    id: { default: null },
+    ...blockIdAttr(),
     calloutType: { default: 'info' as CalloutType },
   },
   parseDOM: [
@@ -44,6 +46,7 @@ export const calloutNode: NodeSpec = {
       getAttrs(dom) {
         const element = dom as HTMLElement;
         return {
+          ...getBlockIdAttrs(element),
           calloutType: element.dataset.calloutType || 'info',
         };
       },
@@ -55,7 +58,7 @@ export const calloutNode: NodeSpec = {
       'div',
       {
         class: `openblock-callout openblock-callout--${calloutType}`,
-        'data-block-id': node.attrs.id,
+        ...blockIdToDOM(node),
         'data-callout-type': calloutType,
       },
       0,

@@ -6,7 +6,7 @@
  * @module
  */
 
-import { Schema, NodeSpec } from 'prosemirror-model';
+import { Schema, NodeSpec, MarkSpec } from 'prosemirror-model';
 
 import {
   docNode,
@@ -90,6 +90,33 @@ export const DEFAULT_MARKS = {
 };
 
 /**
+ * Returns true when not running in a production build.
+ */
+function isDevEnvironment(): boolean {
+  const env = (globalThis as { process?: { env?: { NODE_ENV?: string } } }).process?.env?.NODE_ENV;
+  return env !== 'production';
+}
+
+/**
+ * Warns (in dev) when a custom spec overrides one of the default specs.
+ */
+function warnOnDefaultOverrides(
+  kind: 'node' | 'mark',
+  defaults: Record<string, unknown>,
+  custom: Record<string, unknown> | undefined
+): void {
+  if (!custom || !isDevEnvironment()) return;
+  for (const name of Object.keys(custom)) {
+    if (name in defaults) {
+      console.warn(
+        `[openblock] Custom ${kind} "${name}" overrides the default ${kind} spec. ` +
+          'This may break editor behavior (especially "doc" and "text").'
+      );
+    }
+  }
+}
+
+/**
  * Creates the default OpenBlock schema.
  *
  * Combines node and mark specifications into a ProseMirror Schema instance.
@@ -103,11 +130,19 @@ export const DEFAULT_MARKS = {
  * // schema.nodes.paragraph, schema.marks.bold, etc.
  * ```
  *
+ * @param customNodes - Additional node specs (merged over the defaults)
+ * @param customMarks - Additional mark specs (merged over the defaults)
  * @returns A ProseMirror Schema instance
  */
-export function createSchema(customNodes?: Record<string, NodeSpec>): Schema {
+export function createSchema(
+  customNodes?: Record<string, NodeSpec>,
+  customMarks?: Record<string, MarkSpec>
+): Schema {
+  warnOnDefaultOverrides('node', DEFAULT_NODES, customNodes);
+  warnOnDefaultOverrides('mark', DEFAULT_MARKS, customMarks);
+
   return new Schema({
     nodes: { ...DEFAULT_NODES, ...customNodes },
-    marks: DEFAULT_MARKS,
+    marks: { ...DEFAULT_MARKS, ...customMarks },
   });
 }

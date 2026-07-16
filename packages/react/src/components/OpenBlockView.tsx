@@ -72,13 +72,15 @@ export interface OpenBlockViewRef {
 export const OpenBlockView = forwardRef<OpenBlockViewRef, OpenBlockViewProps>(
   function OpenBlockView({ editor, className, style, children }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
-    const mountedRef = useRef(false);
 
-    // Expose ref handle
+    // Expose ref handle. `container` is a getter so consumers always read
+    // the current DOM element instead of a value captured at creation time.
     useImperativeHandle(
       ref,
       () => ({
-        container: containerRef.current,
+        get container() {
+          return containerRef.current;
+        },
         editor,
       }),
       [editor]
@@ -93,7 +95,6 @@ export const OpenBlockView = forwardRef<OpenBlockViewRef, OpenBlockViewProps>(
 
       // Mount the editor view to the container
       editor.mount(container);
-      mountedRef.current = true;
 
       // No cleanup - editor lifecycle is managed by useOpenBlock
     }, [editor]);

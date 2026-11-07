@@ -8,7 +8,7 @@
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView, SlashMenu } from '@openblock/react';
+ * import { useOpenBlock, OpenBlockView, SlashMenu } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock();
@@ -27,7 +27,7 @@
  *
  * @example Adding an AI writing assistant
  * ```tsx
- * import { SlashMenu, SlashMenuItem } from '@openblock/react';
+ * import { SlashMenu, SlashMenuItem } from '@labbs/openblock-react';
  *
  * const aiWriteItem: SlashMenuItem = {
  *   id: 'ai-write',
@@ -109,9 +109,6 @@ import {
 import { usePluginState } from '../hooks/usePluginState';
 import { useFlipPosition } from '../hooks/useFlipPosition';
 import { QuoteIcon } from './icons';
-
-// Re-export SlashMenuItem for convenience
-export type { SlashMenuItem } from '@labbs/openblock-core';
 
 /**
  * Props for SlashMenu component.

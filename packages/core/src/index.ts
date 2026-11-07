@@ -103,6 +103,8 @@ export {
   strikethroughMark,
   codeMark,
   linkMark,
+  textColorMark,
+  backgroundColorMark,
 } from './schema';
 
 // Sanitization helpers - validate user-provided URLs and CSS values before
@@ -123,7 +125,7 @@ export { generateId } from './utils/generateId';
 // BLOCKS
 // ===========================================================================
 
-export { blockToNode, nodeToBlock, blocksToDoc, docToBlocks } from './blocks';
+export { blockToNode, nodeToBlock, blocksToDoc, docToBlocks, findBlockById } from './blocks';
 export type {
   Block,
   PartialBlock,
@@ -132,6 +134,7 @@ export type {
   TextStyles,
   StyledText,
   LinkContent,
+  HardBreakContent,
   InlineContent,
 } from './blocks';
 
@@ -210,6 +213,17 @@ export {
   isMarkActive,
 } from './plugins';
 export type { BubbleMenuConfig, BubbleMenuState, BlockTypeInfo, TextAlign } from './plugins';
+
+// Multi-block selection
+export {
+  createMultiBlockSelectionPlugin,
+  MULTI_BLOCK_SELECTION_KEY,
+  selectBlock,
+  clearBlockSelection,
+  getSelectedBlockPositions,
+  isMultiBlockSelectionActive,
+} from './plugins';
+export type { MultiBlockSelectionConfig, MultiBlockSelectionState } from './plugins';
 
 // Table plugin
 export { createTablePlugin } from './plugins';

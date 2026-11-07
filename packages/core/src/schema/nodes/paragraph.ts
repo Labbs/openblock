@@ -12,11 +12,6 @@ import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
 import { sanitizeTextAlign } from '../sanitizeStyle';
 
 /**
- * Valid text alignment values.
- */
-export type TextAlignment = 'left' | 'center' | 'right';
-
-/**
  * Paragraph node spec.
  *
  * A basic text block that can contain inline content (text with formatting).

@@ -2,13 +2,10 @@ export { OpenBlockView } from './OpenBlockView';
 export type { OpenBlockViewProps, OpenBlockViewRef } from './OpenBlockView';
 
 export { SlashMenu } from './SlashMenu';
-export type { SlashMenuProps, SlashMenuItem } from './SlashMenu';
+export type { SlashMenuProps } from './SlashMenu';
 
 export { BubbleMenu, BUBBLE_MENU_ITEMS, DEFAULT_BUBBLE_MENU_ORDER } from './BubbleMenu';
 export type { BubbleMenuProps, BubbleMenuItem } from './BubbleMenu';
-
-export { LinkPopover } from './LinkPopover';
-export type { LinkPopoverProps } from './LinkPopover';
 
 export { ColorPicker, DEFAULT_TEXT_COLORS, DEFAULT_BACKGROUND_COLORS } from './ColorPicker';
 export type { ColorPickerProps, ColorOption } from './ColorPicker';

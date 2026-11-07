@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { OpenBlockEditor } from '@openblock/core';
+ * import { OpenBlockEditor } from '@labbs/openblock-core';
  *
  * const editor = new OpenBlockEditor({
  *   element: document.getElementById('editor'),
@@ -24,7 +24,7 @@
 
 import { EditorView } from 'prosemirror-view';
 import { EditorState, Transaction, Plugin, Selection } from 'prosemirror-state';
-import { Schema } from 'prosemirror-model';
+import { Schema, Node as PMNode } from 'prosemirror-model';
 import { history as createHistoryPlugin } from 'prosemirror-history';
 import { generateId } from '../utils/generateId';
 
@@ -43,6 +43,7 @@ import {
   blockToNode,
   nodeToBlock,
   docToBlocks,
+  findBlockById,
 } from '../blocks';
 
 /**
@@ -237,23 +238,9 @@ export class OpenBlockEditor {
     return found ? nodeToBlock(found.node) : undefined;
   }
 
-  /**
-   * Locate a block node by id. Stops traversing as soon as it is found
-   * (returning false from `descendants` only skips children, so we also
-   * short-circuit siblings with a flag).
-   */
-  private _findBlockById(
-    id: string
-  ): { node: import('prosemirror-model').Node; pos: number } | null {
-    let result: { node: import('prosemirror-model').Node; pos: number } | null = null;
-    this.pm.doc.descendants((node, pos) => {
-      if (result) return false;
-      if (node.attrs.id === id) {
-        result = { node, pos };
-        return false;
-      }
-    });
-    return result;
+  /** Locate a block node by id (see {@link findBlockById}). */
+  private _findBlockById(id: string): { node: PMNode; pos: number } | null {
+    return findBlockById(this.pm.doc, id);
   }
 
   /**
@@ -385,6 +372,8 @@ export class OpenBlockEditor {
         // and deleting it first would invalidate this ancestor's range.
         return false;
       }
+      // Ids only live on block nodes: skip inline content
+      return !node.inlineContent;
     });
 
     // Delete in reverse order to preserve positions during iteration
@@ -846,7 +835,7 @@ export class OpenBlockEditor {
   /**
    * Convert a block to a code block.
    */
-  private _convertToCodeBlock(pos: number, node: import('prosemirror-model').Node): void {
+  private _convertToCodeBlock(pos: number, node: PMNode): void {
     const codeBlockType = this._schema.nodes.codeBlock;
     if (!codeBlockType) return;
 
@@ -987,7 +976,7 @@ export class OpenBlockEditor {
   private _setColumnWidthsEvenly(
     tr: Transaction,
     columnListPos: number,
-    columnList: import('prosemirror-model').Node,
+    columnList: PMNode,
     options: { skipPos?: number; columnCount?: number } = {}
   ): void {
     const count = options.columnCount ?? columnList.childCount;
@@ -1023,7 +1012,7 @@ export class OpenBlockEditor {
 
     // Going down to one (or zero) column: unwrap the columnList and keep content
     if (columnList.childCount <= 2) {
-      const remainingContent: import('prosemirror-model').Node[] = [];
+      const remainingContent: PMNode[] = [];
       columnList.forEach((col, offset) => {
         const colPos = columnListPos + 1 + offset;
         // Keep the other columns' content — or this column's own content

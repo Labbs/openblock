@@ -10,6 +10,7 @@
 import { Plugin, PluginKey, EditorState, Selection, TextSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
 import { setBlockType } from 'prosemirror-commands';
+import type { Node as PMNode } from 'prosemirror-model';
 
 /**
  * Plugin key for accessing slash menu state.
@@ -82,7 +83,7 @@ export interface SlashMenuConfig {
  *
  * @example
  * ```typescript
- * import { createSlashMenuPlugin, SLASH_MENU_PLUGIN_KEY } from '@openblock/core';
+ * import { createSlashMenuPlugin, SLASH_MENU_PLUGIN_KEY } from '@labbs/openblock-core';
  *
  * const plugin = createSlashMenuPlugin({ onlyAtStart: true });
  *
@@ -312,7 +313,7 @@ export function executeSlashCommand(
  * @param view - The editor view
  * @param node - The new node to insert
  */
-function replaceCurrentBlock(view: EditorView, node: ReturnType<typeof view.state.schema.nodes.paragraph.create>): void {
+function replaceCurrentBlock(view: EditorView, node: PMNode): void {
   const { $from } = view.state.selection;
 
   // Target the textblock that actually contains the cursor, not the
@@ -346,44 +347,39 @@ function replaceCurrentBlock(view: EditorView, node: ReturnType<typeof view.stat
 export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMenuItem[] {
   const items: SlashMenuItem[] = [];
 
+  /** Replace the selection with a node */
+  const insertNode = (view: EditorView, node: PMNode) => {
+    view.dispatch(view.state.tr.replaceSelectionWith(node));
+  };
+
   // Headings
   if (schema.nodes.heading) {
-    items.push(
-      {
-        id: 'heading1',
-        title: 'Heading 1',
-        description: 'Large section heading',
-        icon: 'heading1',
-        keywords: ['h1', 'title', 'large'],
+    const headings = [
+      { description: 'Large section heading', keywords: ['h1', 'title', 'large'] },
+      { description: 'Medium section heading', keywords: ['h2', 'subtitle'] },
+      { description: 'Small section heading', keywords: ['h3'] },
+    ];
+    headings.forEach(({ description, keywords }, i) => {
+      const level = i + 1;
+      items.push({
+        id: `heading${level}`,
+        title: `Heading ${level}`,
+        description,
+        icon: `heading${level}`,
+        keywords,
         group: 'Basic blocks',
-        action: (view, _state) => {
-          setBlockType(schema.nodes.heading, { level: 1 })(view.state, view.dispatch);
+        action: (view) => {
+          setBlockType(schema.nodes.heading, { level })(view.state, view.dispatch);
         },
-      },
-      {
-        id: 'heading2',
-        title: 'Heading 2',
-        description: 'Medium section heading',
-        icon: 'heading2',
-        keywords: ['h2', 'subtitle'],
-        group: 'Basic blocks',
-        action: (view, _state) => {
-          setBlockType(schema.nodes.heading, { level: 2 })(view.state, view.dispatch);
-        },
-      },
-      {
-        id: 'heading3',
-        title: 'Heading 3',
-        description: 'Small section heading',
-        icon: 'heading3',
-        keywords: ['h3'],
-        group: 'Basic blocks',
-        action: (view, _state) => {
-          setBlockType(schema.nodes.heading, { level: 3 })(view.state, view.dispatch);
-        },
-      }
-    );
+      });
+    });
   }
+
+  /** Replace the current block with a list holding one empty item */
+  const createListAction = (listType: 'bulletList' | 'orderedList') => (view: EditorView) => {
+    const item = schema.nodes.listItem.create(null, schema.nodes.paragraph.create());
+    replaceCurrentBlock(view, schema.nodes[listType].create(null, item));
+  };
 
   // Lists
   if (schema.nodes.bulletList && schema.nodes.listItem) {
@@ -394,14 +390,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
       icon: 'list',
       keywords: ['ul', 'unordered', 'bullets'],
       group: 'Lists',
-      action: (view, _state) => {
-        const item = schema.nodes.listItem.create(
-          null,
-          schema.nodes.paragraph.create()
-        );
-        const list = schema.nodes.bulletList.create(null, item);
-        replaceCurrentBlock(view, list);
-      },
+      action: createListAction('bulletList'),
     });
   }
 
@@ -413,14 +402,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
       icon: 'listOrdered',
       keywords: ['ol', 'ordered', 'numbers'],
       group: 'Lists',
-      action: (view, _state) => {
-        const item = schema.nodes.listItem.create(
-          null,
-          schema.nodes.paragraph.create()
-        );
-        const list = schema.nodes.orderedList.create(null, item);
-        replaceCurrentBlock(view, list);
-      },
+      action: createListAction('orderedList'),
     });
   }
 
@@ -442,9 +424,8 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
 
   // Callout - callouts accept inline content directly
   if (schema.nodes.callout) {
-    const createCalloutAction = (calloutType: string) => (view: EditorView, _state: SlashMenuState) => {
-      const node = schema.nodes.callout.create({ calloutType });
-      replaceCurrentBlock(view, node);
+    const createCalloutAction = (calloutType: string) => (view: EditorView) => {
+      replaceCurrentBlock(view, schema.nodes.callout.create({ calloutType }));
     };
 
     items.push(
@@ -529,6 +510,14 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
 
   // Columns
   if (schema.nodes.columnList && schema.nodes.column) {
+    /** Insert a column layout, one empty paragraph per column */
+    const createColumnsAction = (widths: number[]) => (view: EditorView) => {
+      const columns = widths.map((width) =>
+        schema.nodes.column.create({ width }, schema.nodes.paragraph.create())
+      );
+      insertNode(view, schema.nodes.columnList.create(null, columns));
+    };
+
     items.push(
       {
         id: 'columns2',
@@ -537,18 +526,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'columns',
         keywords: ['col', 'layout', 'split', 'two'],
         group: 'Layout',
-        action: (view, _state) => {
-          const col1 = schema.nodes.column.create(
-            { width: 50 },
-            schema.nodes.paragraph.create()
-          );
-          const col2 = schema.nodes.column.create(
-            { width: 50 },
-            schema.nodes.paragraph.create()
-          );
-          const columnList = schema.nodes.columnList.create(null, [col1, col2]);
-          view.dispatch(view.state.tr.replaceSelectionWith(columnList));
-        },
+        action: createColumnsAction([50, 50]),
       },
       {
         id: 'columns3',
@@ -557,22 +535,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'columns',
         keywords: ['col', 'layout', 'split', 'three'],
         group: 'Layout',
-        action: (view, _state) => {
-          const col1 = schema.nodes.column.create(
-            { width: 33.33 },
-            schema.nodes.paragraph.create()
-          );
-          const col2 = schema.nodes.column.create(
-            { width: 33.33 },
-            schema.nodes.paragraph.create()
-          );
-          const col3 = schema.nodes.column.create(
-            { width: 33.34 },
-            schema.nodes.paragraph.create()
-          );
-          const columnList = schema.nodes.columnList.create(null, [col1, col2, col3]);
-          view.dispatch(view.state.tr.replaceSelectionWith(columnList));
-        },
+        action: createColumnsAction([33.33, 33.33, 33.34]),
       },
       {
         id: 'columnsSidebar',
@@ -581,45 +544,25 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'columns',
         keywords: ['col', 'layout', 'sidebar', 'aside'],
         group: 'Layout',
-        action: (view, _state) => {
-          const sidebar = schema.nodes.column.create(
-            { width: 30 },
-            schema.nodes.paragraph.create()
-          );
-          const main = schema.nodes.column.create(
-            { width: 70 },
-            schema.nodes.paragraph.create()
-          );
-          const columnList = schema.nodes.columnList.create(null, [sidebar, main]);
-          view.dispatch(view.state.tr.replaceSelectionWith(columnList));
-        },
+        action: createColumnsAction([30, 70]),
       }
     );
   }
 
   // Tables
   if (schema.nodes.table && schema.nodes.tableRow && schema.nodes.tableCell) {
-    const createTableAction =
-      (rowCount: number, colCount: number) =>
-      (view: EditorView, _state: SlashMenuState) => {
-        const createRow = () => {
-          const cells = [];
-          for (let i = 0; i < colCount; i++) {
-            cells.push(
-              schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
-            );
-          }
-          return schema.nodes.tableRow.create(null, cells);
-        };
-
-        const rows = [];
-        for (let i = 0; i < rowCount; i++) {
-          rows.push(createRow());
-        }
-
-        const table = schema.nodes.table.create(null, rows);
-        view.dispatch(view.state.tr.replaceSelectionWith(table));
-      };
+    /** Insert an empty rowCount x colCount table */
+    const createTableAction = (rowCount: number, colCount: number) => (view: EditorView) => {
+      const rows = Array.from({ length: rowCount }, () =>
+        schema.nodes.tableRow.create(
+          null,
+          Array.from({ length: colCount }, () =>
+            schema.nodes.tableCell.create(null, schema.nodes.paragraph.create())
+          )
+        )
+      );
+      insertNode(view, schema.nodes.table.create(null, rows));
+    };
 
     items.push(
       {
@@ -661,10 +604,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
       icon: 'image',
       keywords: ['img', 'picture', 'photo', 'media'],
       group: 'Media',
-      action: (view) => {
-        const node = schema.nodes.image.create({ src: '', alt: '' });
-        view.dispatch(view.state.tr.replaceSelectionWith(node));
-      },
+      action: (view) => insertNode(view, schema.nodes.image.create({ src: '', alt: '' })),
     });
   }
 
@@ -695,10 +635,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'embed',
         keywords: ['video', 'youtube', 'vimeo', 'iframe', 'external'],
         group: 'Media',
-        action: (view) => {
-          const node = schema.nodes.embed.create({ url: '', provider: 'generic' });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
-        },
+        action: (view) => insertNode(view, schema.nodes.embed.create({ url: '', provider: 'generic' })),
       },
       {
         id: 'youtube',
@@ -707,10 +644,7 @@ export function getDefaultSlashMenuItems(schema: EditorState['schema']): SlashMe
         icon: 'youtube',
         keywords: ['video', 'embed', 'media'],
         group: 'Media',
-        action: (view) => {
-          const node = schema.nodes.embed.create({ url: '', provider: 'youtube' });
-          view.dispatch(view.state.tr.replaceSelectionWith(node));
-        },
+        action: (view) => insertNode(view, schema.nodes.embed.create({ url: '', provider: 'youtube' })),
       }
     );
   }

@@ -28,7 +28,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   GitHub Release; pre-release tags publish under the `next` dist-tag.
 - Public sanitization helpers: `sanitizeLinkHref`, `sanitizeImageSrc`, `sanitizeEmbedUrl`, `sanitizeCssColor`,
   `sanitizeTextAlign`, `toNonNegativeNumber`, and `generateId`.
-- CI workflow (lint, build, type-check, production dependency audit) and Dependabot configuration.
+- `findBlockById(doc, id)` helper (early exit, never walks inline content).
+- Multi-block selection API is now public: `createMultiBlockSelectionPlugin`, `MULTI_BLOCK_SELECTION_KEY`,
+  `selectBlock`, `clearBlockSelection`, `getSelectedBlockPositions`, `isMultiBlockSelectionActive` (+ types).
+- `textColorMark`, `backgroundColorMark` and the `HardBreakContent` type are exported from the package root.
+- CI workflow (lint, dead code, build, type-check, production dependency audit) and Dependabot configuration.
+- `pnpm deadcode`: [knip](https://knip.dev) (unused files, exports, dependencies) + unused CSS class check.
+
+### Performance
+- **React**: `useOpenBlock` only subscribes to `change` / `selectionChange` while `onUpdate` /
+  `onSelectionChange` are provided. Previously every keystroke converted the whole document to JSON even when
+  nobody listened (~0.5 ms per keystroke on a 2,000-block document).
+- Drag & drop: the block position cache is rebuilt lazily on hover instead of on every transaction; the side
+  menu is repositioned once per animation frame after edits (no forced synchronous layout per keystroke);
+  document-level `mousemove` / `mouseup` listeners are only attached while dragging; block DOM lookup uses
+  `view.nodeDOM()` instead of an attribute selector.
+- Block id assignment and block lookups no longer walk inline content (x1.5 / x5 faster on large documents).
+- `TableHandles`: table position resolved via `posAtDOM` (no full-document walk), mouse moves outside tables
+  are ignored when no handle is shown, no state updates on edits while hidden.
+- `MediaMenu`: a single passive capture listener for scroll events (was two, hiding the menu twice).
+- npm tarball of `@labbs/openblock-core`: 1.2 MB → 520 kB (standalone source maps are only shipped in the
+  GitHub Release assets).
+
+### Removed
+- Unused code: `styles/index.ts` and `types/index.ts` barrels, the `prosemirror-transform` dependency (never
+  imported), dead CSS rules (`.ob-text-align-buttons`, `.selectedCell`, table resize handles, `.ob-table-wrapper`,
+  `.ob-color-picker-indicator`), internal-only exports.
 
 ### Changed
 - Removed the `uuid` runtime dependency (block IDs use the Web Crypto API).

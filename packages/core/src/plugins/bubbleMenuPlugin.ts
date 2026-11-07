@@ -9,6 +9,7 @@
 
 import { Plugin, PluginKey, EditorState, NodeSelection } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
+import type { Mark } from 'prosemirror-model';
 import {
   BlurHideHandle,
   createBlurHideHandle,
@@ -153,34 +154,34 @@ function getActiveMarks(state: EditorState): BubbleMenuState['activeMarks'] {
     backgroundColor: null as string | null,
   };
 
-  if (empty) {
-    // Check stored marks or marks at cursor
-    const storedMarks = state.storedMarks || $from.marks();
-    for (const mark of storedMarks) {
-      if (mark.type.name === 'bold') marks.bold = true;
-      if (mark.type.name === 'italic') marks.italic = true;
-      if (mark.type.name === 'underline') marks.underline = true;
-      if (mark.type.name === 'strikethrough') marks.strikethrough = true;
-      if (mark.type.name === 'code') marks.code = true;
-      if (mark.type.name === 'link') marks.link = mark.attrs.href;
-      if (mark.type.name === 'textColor') marks.textColor = mark.attrs.color;
-      if (mark.type.name === 'backgroundColor') marks.backgroundColor = mark.attrs.color;
-    }
-  } else {
-    // Check marks in selection range
-    state.doc.nodesBetween(from, to, (node) => {
-      if (node.isText && node.marks) {
-        for (const mark of node.marks) {
-          if (mark.type.name === 'bold') marks.bold = true;
-          if (mark.type.name === 'italic') marks.italic = true;
-          if (mark.type.name === 'underline') marks.underline = true;
-          if (mark.type.name === 'strikethrough') marks.strikethrough = true;
-          if (mark.type.name === 'code') marks.code = true;
-          if (mark.type.name === 'link') marks.link = mark.attrs.href;
-          if (mark.type.name === 'textColor') marks.textColor = mark.attrs.color;
-          if (mark.type.name === 'backgroundColor') marks.backgroundColor = mark.attrs.color;
-        }
+  const collect = (markList: readonly Mark[]) => {
+    for (const mark of markList) {
+      switch (mark.type.name) {
+        case 'bold':
+        case 'italic':
+        case 'underline':
+        case 'strikethrough':
+        case 'code':
+          marks[mark.type.name] = true;
+          break;
+        case 'link':
+          marks.link = mark.attrs.href;
+          break;
+        case 'textColor':
+        case 'backgroundColor':
+          marks[mark.type.name] = mark.attrs.color;
+          break;
       }
+    }
+  };
+
+  if (empty) {
+    // Stored marks or marks at cursor
+    collect(state.storedMarks || $from.marks());
+  } else {
+    // Marks in the selection range
+    state.doc.nodesBetween(from, to, (node) => {
+      if (node.isText) collect(node.marks);
     });
   }
 
@@ -251,7 +252,7 @@ function shouldShowMenu(
  *
  * @example
  * ```typescript
- * import { createBubbleMenuPlugin, BUBBLE_MENU_PLUGIN_KEY } from '@openblock/core';
+ * import { createBubbleMenuPlugin, BUBBLE_MENU_PLUGIN_KEY } from '@labbs/openblock-core';
  *
  * const plugin = createBubbleMenuPlugin();
  *

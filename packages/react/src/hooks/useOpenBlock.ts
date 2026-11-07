@@ -5,7 +5,7 @@
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView } from '@openblock/react';
+ * import { useOpenBlock, OpenBlockView } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock({
@@ -106,9 +106,10 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
       prosemirror: editorOptions.prosemirror,
       // Stable wrappers that delegate to the latest callbacks provided to the
       // hook, so consumers can pass inline functions without them being
-      // frozen at mount time.
-      onUpdate: (blocks) => optionsRef.current.onUpdate?.(blocks),
-      onSelectionChange: (blocks) => optionsRef.current.onSelectionChange?.(blocks),
+      // frozen at mount time. onUpdate / onSelectionChange are subscribed
+      // separately below, only while provided.
+      onUpdate: undefined,
+      onSelectionChange: undefined,
       onFocus: () => optionsRef.current.onFocus?.(),
       onBlur: () => optionsRef.current.onBlur?.(),
     });
@@ -133,6 +134,24 @@ export function useOpenBlock(options: UseOpenBlockOptions = {}): OpenBlockEditor
       editorRef.current = null;
     };
   }, []);
+
+  // The editor only converts the document to blocks (a full-document walk
+  // and allocation) when someone listens to it: subscribe only while the
+  // callbacks are actually provided, instead of on every keystroke.
+  const hasOnUpdate = options.onUpdate !== undefined;
+  const hasOnSelectionChange = options.onSelectionChange !== undefined;
+
+  useEffect(() => {
+    if (!editor || !hasOnUpdate) return;
+    return editor.on('change', ({ blocks }) => optionsRef.current.onUpdate?.(blocks));
+  }, [editor, hasOnUpdate]);
+
+  useEffect(() => {
+    if (!editor || !hasOnSelectionChange) return;
+    return editor.on('selectionChange', ({ blocks }) =>
+      optionsRef.current.onSelectionChange?.(blocks)
+    );
+  }, [editor, hasOnSelectionChange]);
 
   return editor;
 }

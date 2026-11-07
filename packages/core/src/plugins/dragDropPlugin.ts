@@ -88,7 +88,7 @@ export interface DragDropConfig {
  *
  * @example
  * ```typescript
- * import { createDragDropPlugin } from '@openblock/core';
+ * import { createDragDropPlugin } from '@labbs/openblock-core';
  *
  * const plugin = createDragDropPlugin({
  *   showHandles: true,
@@ -200,6 +200,9 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
         // Add class to handle and body for cursor
         handle.classList.add(`${handleClass}--dragging`);
         document.body.style.cursor = 'grabbing';
+
+        // Track the pointer on the whole document, for the drag only
+        toggleDragListeners(true);
       });
 
       menu.appendChild(handle);
@@ -227,10 +230,8 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
     }
 
     // Get the actual DOM element for this block to position correctly inside columns
-    const blockId = node.attrs.id;
-    const blockEl = blockId
-      ? (view.dom.querySelector(`[data-block-id="${blockId}"]`) as HTMLElement | null)
-      : null;
+    const dom = view.nodeDOM(blockPos);
+    const blockEl = dom instanceof HTMLElement ? dom : null;
 
     const editorRect = view.dom.getBoundingClientRect();
     let top: number;
@@ -289,7 +290,9 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
   let cachedDoc: PMNode | null = null;
 
   /**
-   * Update the block position cache when document changes.
+   * Rebuild the block position cache if the document changed since the last
+   * build. Called lazily on hover (not on every transaction): typing never
+   * pays for it.
    */
   function updateBlockPosCache(view: EditorView): void {
     if (view.state.doc === cachedDoc) return;
@@ -301,7 +304,8 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
       if (node.attrs.id) {
         blockPosCache.set(node.attrs.id, pos);
       }
-      return true;
+      // Ids only live on block nodes: skip inline content
+      return !node.inlineContent;
     });
   }
 
@@ -322,24 +326,32 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
     const blockId = blockEl.getAttribute('data-block-id');
     if (!blockId) return null;
 
-    // Use cached position if available
-    const cachedPos = blockPosCache.get(blockId);
-    if (cachedPos !== undefined) {
-      return { pos: cachedPos, id: blockId };
-    }
-
-    // Fallback: update cache and try again
+    // No-op unless the document changed since the last lookup
     updateBlockPosCache(view);
     const pos = blockPosCache.get(blockId);
-    if (pos === undefined) return null;
-
-    return { pos, id: blockId };
+    return pos === undefined ? null : { pos, id: blockId };
   }
 
   // Event handlers stored for cleanup
   let handleMouseMove: ((event: MouseEvent) => void) | null = null;
   let handleDragMove: ((event: MouseEvent) => void) | null = null;
   let handleDragEnd: (() => void) | null = null;
+
+  /**
+   * Attach / detach the document-level drag listeners. They are only
+   * attached while a block is being dragged, so regular mouse moves anywhere
+   * on the page don't run editor code.
+   */
+  function toggleDragListeners(enabled: boolean): void {
+    if (!handleDragMove || !handleDragEnd) return;
+    if (enabled) {
+      document.addEventListener('mousemove', handleDragMove);
+      document.addEventListener('mouseup', handleDragEnd);
+    } else {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+    }
+  }
 
   // Timer for delayed hiding of side menu
   let hideMenuTimer: ReturnType<typeof setTimeout> | null = null;
@@ -520,6 +532,8 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
 
     // Mouse up - drop the block
     handleDragEnd = () => {
+      toggleDragListeners(false);
+
       // Reset cursor
       document.body.style.cursor = '';
 
@@ -551,10 +565,6 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
       const dragHandle = sideMenuEl?.querySelector(`.${handleClass}`);
       dragHandle?.classList.remove(`${handleClass}--dragging`);
     };
-
-    // Attach mouse event listeners to document for drag
-    document.addEventListener('mousemove', handleDragMove);
-    document.addEventListener('mouseup', handleDragEnd);
   }
 
   return new Plugin<DragDropState>({
@@ -575,28 +585,43 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
         });
       }
 
+      // Pending repositioning after a document change (one per frame max)
+      let repositionRafId: number | null = null;
+      const cancelReposition = () => {
+        if (repositionRafId !== null) {
+          cancelAnimationFrame(repositionRafId);
+          repositionRafId = null;
+        }
+      };
+
       return {
         update(view, prevState) {
-          const docChanged = view.state.doc !== prevState.doc;
-
-          // Update block position cache when document changes
-          updateBlockPosCache(view);
-
           // Ensure side menu exists (may not have been created if editor wasn't mounted)
           ensureSideMenu(view);
 
-          const state = DRAG_DROP_PLUGIN_KEY.getState(view.state);
-          const prevPluginState = DRAG_DROP_PLUGIN_KEY.getState(prevState);
+          const hoveredBlockPos = DRAG_DROP_PLUGIN_KEY.getState(view.state)?.hoveredBlockPos ?? null;
+          const prevHoveredBlockPos =
+            DRAG_DROP_PLUGIN_KEY.getState(prevState)?.hoveredBlockPos ?? null;
 
-          // Repositioning does DOM measurements (querySelector +
-          // getBoundingClientRect): skip when nothing relevant changed
-          const hoveredBlockPos = state?.hoveredBlockPos ?? null;
-          const prevHoveredBlockPos = prevPluginState?.hoveredBlockPos ?? null;
-          if (hoveredBlockPos === prevHoveredBlockPos && !docChanged) {
+          // Hovered block changed: reposition right away
+          if (hoveredBlockPos !== prevHoveredBlockPos) {
+            cancelReposition();
+            updateSideMenuPosition(view, hoveredBlockPos);
             return;
           }
 
-          updateSideMenuPosition(view, hoveredBlockPos);
+          // Edits can shift the hovered block. Repositioning measures the DOM
+          // (getBoundingClientRect): do it once per frame instead of forcing
+          // a synchronous layout on every keystroke.
+          if (hoveredBlockPos !== null && view.state.doc !== prevState.doc && repositionRafId === null) {
+            repositionRafId = requestAnimationFrame(() => {
+              repositionRafId = null;
+              updateSideMenuPosition(
+                view,
+                DRAG_DROP_PLUGIN_KEY.getState(view.state)?.hoveredBlockPos ?? null
+              );
+            });
+          }
         },
 
         destroy() {
@@ -604,15 +629,12 @@ export function createDragDropPlugin(config: DragDropConfig = {}): Plugin {
             cancelAnimationFrame(ensureMenuRafId);
             ensureMenuRafId = null;
           }
+          cancelReposition();
           if (handleMouseMove) {
             view.dom.removeEventListener('mousemove', handleMouseMove);
           }
-          if (handleDragMove) {
-            document.removeEventListener('mousemove', handleDragMove);
-          }
-          if (handleDragEnd) {
-            document.removeEventListener('mouseup', handleDragEnd);
-          }
+          toggleDragListeners(false);
+          if (draggedBlockPos !== null) document.body.style.cursor = '';
           if (hideMenuTimer) {
             clearTimeout(hideMenuTimer);
             hideMenuTimer = null;

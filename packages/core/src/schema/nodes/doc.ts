@@ -15,7 +15,7 @@ import type { NodeSpec } from 'prosemirror-model';
  *
  * @example
  * ```typescript
- * import { docNode } from '@openblock/core';
+ * import { docNode } from '@labbs/openblock-core';
  * // Used internally by createSchema()
  * ```
  */

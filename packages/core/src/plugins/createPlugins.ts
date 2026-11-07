@@ -133,7 +133,7 @@ export interface CreatePluginsOptions {
  *
  * @example
  * ```typescript
- * import { createPlugins } from '@openblock/core';
+ * import { createPlugins } from '@labbs/openblock-core';
  *
  * const plugins = createPlugins({
  *   schema: mySchema,

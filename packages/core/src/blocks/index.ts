@@ -20,5 +20,6 @@ export type {
 } from './types';
 
 // Conversion functions
-export { blockToNode, inlineContentToNodes, stylesToMarks, blocksToDoc } from './blockToNode';
-export { nodeToBlock, marksToStyles, docToBlocks } from './nodeToBlock';
+export { blockToNode, blocksToDoc } from './blockToNode';
+export { nodeToBlock, docToBlocks } from './nodeToBlock';
+export { findBlockById } from './findBlock';

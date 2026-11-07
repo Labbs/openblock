@@ -400,8 +400,9 @@ pnpm install
 # Build all packages (ESM + CJS + standalone bundles)
 pnpm build
 
-# Lint and type-check
+# Lint, dead code (unused files / exports / deps / CSS classes) and type-check
 pnpm lint
+pnpm deadcode
 pnpm typecheck
 
 # Run example in dev mode

@@ -7,7 +7,6 @@
 // Core nodes
 export { docNode } from './doc';
 export { paragraphNode } from './paragraph';
-export type { TextAlignment } from './paragraph';
 export { headingNode } from './heading';
 export { textNode } from './text';
 export { hardBreakNode } from './hardBreak';

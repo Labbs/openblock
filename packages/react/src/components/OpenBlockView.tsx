@@ -3,7 +3,7 @@
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView } from '@openblock/react';
+ * import { useOpenBlock, OpenBlockView } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock({

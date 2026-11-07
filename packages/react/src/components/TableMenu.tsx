@@ -6,7 +6,7 @@
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView, TableMenu } from '@openblock/react';
+ * import { useOpenBlock, OpenBlockView, TableMenu } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock();

@@ -8,7 +8,7 @@
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView, TableHandles } from '@openblock/react';
+ * import { useOpenBlock, OpenBlockView, TableHandles } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock();
@@ -25,6 +25,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   OpenBlockEditor,
+  EditorView,
   Transaction,
   addRowAtIndex,
   addColumnAtIndex,
@@ -75,6 +76,33 @@ interface HoverState {
 }
 
 /**
+ * Resolve the document position of a rendered `<table>` element.
+ */
+function findTablePos(view: EditorView, tableElement: HTMLElement): number | null {
+  let pos: number;
+  try {
+    pos = view.posAtDOM(tableElement, 0);
+  } catch {
+    return null;
+  }
+  const { doc } = view.state;
+  let tablePos: number | null = doc.nodeAt(pos)?.type.name === 'table' ? pos : null;
+  if (tablePos === null) {
+    const $pos = doc.resolve(pos);
+    for (let depth = $pos.depth; depth > 0; depth--) {
+      if ($pos.node(depth).type.name === 'table') {
+        tablePos = $pos.before(depth);
+        break;
+      }
+    }
+  }
+  if (tablePos === null) return null;
+  // Make sure the position really maps to this element (e.g. nested tables)
+  const dom = view.nodeDOM(tablePos);
+  return dom === tableElement || (dom instanceof Node && tableElement.contains(dom)) ? tablePos : null;
+}
+
+/**
  * Find table info from DOM and editor state.
  *
  * Measures the table geometry once; the result is cached by the component
@@ -84,22 +112,11 @@ function getTableState(
   editor: OpenBlockEditor,
   tableElement: HTMLElement
 ): TableState | null {
-  // Find table position in document
+  // Find the table position from its DOM element (O(depth), instead of
+  // walking the whole document)
   const view = editor.pm.view;
-  let tablePos = -1;
-
-  view.state.doc.descendants((node, pos) => {
-    if (node.type.name === 'table' && tablePos === -1) {
-      const domNode = view.nodeDOM(pos);
-      if (domNode === tableElement || tableElement.contains(domNode as Node)) {
-        tablePos = pos;
-        return false;
-      }
-    }
-    return true;
-  });
-
-  if (tablePos === -1) return null;
+  const tablePos = findTablePos(view, tableElement);
+  if (tablePos === null) return null;
 
   const table = view.state.doc.nodeAt(tablePos);
   if (!table || table.type.name !== 'table') return null;
@@ -295,6 +312,9 @@ export function TableHandles({
 
   // Mirror of tableState readable from stable event handlers.
   const tableStateRef = useRef<TableState | null>(null);
+  // Whether a handle menu is open (read by the transaction listener)
+  const menuOpenRef = useRef(false);
+  menuOpenRef.current = showRowMenu !== null || showColMenu !== null;
   tableStateRef.current = tableState;
 
   const hideAll = useCallback(() => {
@@ -349,21 +369,21 @@ export function TableHandles({
       const current = tableStateRef.current;
 
       if (!tableElement) {
-        // Not over a table, but check if we have a current table state
-        // and mouse is near the table (in the handle zone)
-        if (current) {
-          const tableRect = current.tableRect;
-          // Keep visible only if mouse is within the extend button zones (right and bottom)
-          const isInExtendZone =
-            (e.clientX >= tableRect.right && e.clientX <= tableRect.right + 30 &&
-             e.clientY >= tableRect.top && e.clientY <= tableRect.bottom) ||
-            (e.clientY >= tableRect.bottom && e.clientY <= tableRect.bottom + 30 &&
-             e.clientX >= tableRect.left && e.clientX <= tableRect.right);
+        // Nothing is shown: nothing to hide (avoids re-arming a timer on
+        // every mouse move anywhere on the page)
+        if (!current) return;
 
-          if (isInExtendZone) {
-            clearHideTimeout();
-            return;
-          }
+        // Keep visible only if mouse is within the extend button zones (right and bottom)
+        const tableRect = current.tableRect;
+        const isInExtendZone =
+          (e.clientX >= tableRect.right && e.clientX <= tableRect.right + 30 &&
+           e.clientY >= tableRect.top && e.clientY <= tableRect.bottom) ||
+          (e.clientY >= tableRect.bottom && e.clientY <= tableRect.bottom + 30 &&
+           e.clientX >= tableRect.left && e.clientX <= tableRect.right);
+
+        if (isInExtendZone) {
+          clearHideTimeout();
+          return;
         }
         scheduleHide();
         return;
@@ -456,7 +476,11 @@ export function TableHandles({
     if (!editor || editor.isDestroyed) return;
 
     const unsubscribe = editor.on('transaction', ({ transaction }) => {
-      if ((transaction as Transaction).docChanged) {
+      // Skip the state updates while typing when no handle is shown
+      if (
+        (transaction as Transaction).docChanged &&
+        (tableStateRef.current !== null || menuOpenRef.current)
+      ) {
         hideAll();
       }
     });
@@ -472,11 +496,11 @@ export function TableHandles({
       hideAll();
     };
 
-    window.addEventListener('scroll', handleScrollOrResize, true);
-    window.addEventListener('resize', handleScrollOrResize);
+    window.addEventListener('scroll', handleScrollOrResize, { capture: true, passive: true });
+    window.addEventListener('resize', handleScrollOrResize, { passive: true });
 
     return () => {
-      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('scroll', handleScrollOrResize, { capture: true });
       window.removeEventListener('resize', handleScrollOrResize);
     };
   }, [editor, tableState, hideAll]);

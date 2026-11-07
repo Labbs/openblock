@@ -103,7 +103,7 @@ export function blockToNode(schema: Schema, block: Block): PMNode {
  * @param content - Array of inline content items
  * @returns Array of ProseMirror nodes
  */
-export function inlineContentToNodes(schema: Schema, content: InlineContent[]): PMNode[] {
+function inlineContentToNodes(schema: Schema, content: InlineContent[]): PMNode[] {
   const nodes: PMNode[] = [];
 
   for (const item of content) {
@@ -143,7 +143,7 @@ export function inlineContentToNodes(schema: Schema, content: InlineContent[]): 
  * @param styles - The text styles object
  * @returns Array of ProseMirror marks
  */
-export function stylesToMarks(schema: Schema, styles: TextStyles): readonly Mark[] {
+function stylesToMarks(schema: Schema, styles: TextStyles): readonly Mark[] {
   const marks: Mark[] = [];
 
   if (styles.bold && schema.marks.bold) {

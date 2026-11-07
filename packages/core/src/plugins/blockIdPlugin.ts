@@ -22,7 +22,7 @@ export const BLOCK_ID_PLUGIN_KEY = new PluginKey('blockIds');
  *
  * @example
  * ```typescript
- * import { createBlockIdPlugin } from '@openblock/core';
+ * import { createBlockIdPlugin } from '@labbs/openblock-core';
  *
  * const plugins = [
  *   createBlockIdPlugin(),
@@ -48,14 +48,11 @@ export function createBlockIdPlugin(): Plugin {
       const seenIds = new Set<string>();
 
       newState.doc.descendants((node, pos) => {
-        // Only handle block nodes (plus column nodes, which need IDs too)
-        if (!node.isBlock && node.type.name !== 'column') {
-          return;
-        }
-
-        // Only assign ID if the node type has an id attribute defined
+        // Ids only live on block nodes (columns included): inline nodes are
+        // never reached since textblock content is skipped below.
+        // Only assign an ID if the node type defines an id attribute.
         if (node.attrs.id === undefined) {
-          return;
+          return !node.inlineContent;
         }
 
         const id = node.attrs.id as string | null;
@@ -69,6 +66,10 @@ export function createBlockIdPlugin(): Plugin {
         } else {
           seenIds.add(id);
         }
+
+        // Ids only live on block nodes: skip inline content (text nodes are
+        // the bulk of the document, and this runs on every edit)
+        return !node.inlineContent;
       });
 
       // If no updates needed, return null

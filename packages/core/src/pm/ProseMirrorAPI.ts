@@ -26,7 +26,7 @@ import {
   DecorationSet,
   DecorationAttrs,
 } from 'prosemirror-view';
-import type { DecorationSource, NodeView, NodeViewConstructor } from 'prosemirror-view';
+import type { NodeView, NodeViewConstructor } from 'prosemirror-view';
 import {
   EditorState,
   Transaction,
@@ -676,7 +676,6 @@ export {
   PluginKey,
   Decoration,
   DecorationSet,
-  DecorationSource,
   PMNode as Node,
   Schema,
   Mark,

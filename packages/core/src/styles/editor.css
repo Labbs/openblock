@@ -626,16 +626,6 @@
 }
 
 /* ===========================================================================
- * Text Alignment Buttons (in Bubble Menu)
- * =========================================================================== */
-
-.ob-text-align-buttons {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-}
-
-/* ===========================================================================
  * Block Type Selector (in Bubble Menu)
  * =========================================================================== */
 
@@ -854,36 +844,6 @@
   margin-bottom: 0;
 }
 
-/* Selected cell */
-.openblock-editor .ob-table-cell.selectedCell,
-.openblock-editor .ob-table-header.selectedCell {
-  background: hsl(220 90% 56% / 0.1);
-}
-
-/* Cell resize handle (for future column resize) */
-.openblock-editor .ob-table-cell-resize-handle,
-.openblock-editor .ob-table-header-resize-handle {
-  position: absolute;
-  right: -2px;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  cursor: col-resize;
-  background: transparent;
-  z-index: 10;
-}
-
-.openblock-editor .ob-table-cell-resize-handle:hover,
-.openblock-editor .ob-table-header-resize-handle:hover {
-  background: hsl(var(--ob-primary) / 0.3);
-}
-
-/* Table wrapper for overflow handling */
-.openblock-editor .ob-table-wrapper {
-  overflow-x: auto;
-  margin: 0.5em 0;
-}
-
 /* ===========================================================================
  * Link Popover (compact inline design)
  * =========================================================================== */
@@ -1029,16 +989,6 @@
 
 .ob-color-picker > .ob-bubble-menu-btn {
   position: relative;
-}
-
-.ob-color-picker-indicator {
-  position: absolute;
-  bottom: 3px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14px;
-  height: 3px;
-  border-radius: 2px;
 }
 
 .ob-color-picker-dropdown {

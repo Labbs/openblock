@@ -6,7 +6,7 @@
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView, MediaMenu } from '@openblock/react';
+ * import { useOpenBlock, OpenBlockView, MediaMenu } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock();
@@ -29,6 +29,7 @@ import {
   deleteMediaNode,
   ImageAttrs,
   EmbedAttrs,
+  findBlockById,
 } from '@labbs/openblock-core';
 import { usePluginState } from '../hooks/usePluginState';
 import { useClickOutside } from '../hooks/useClickOutside';
@@ -185,17 +186,10 @@ export function MediaMenu({ editor, className }: MediaMenuProps): React.ReactEle
       );
     };
 
-    // Listen to scroll on the editor container and window
-    const editorElement = editor.pm.view.dom;
-    const scrollContainer = editorElement.closest('.openblock-container') || editorElement.parentElement;
-
-    window.addEventListener('scroll', handleScroll, true);
-    scrollContainer?.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll, true);
-      scrollContainer?.removeEventListener('scroll', handleScroll);
-    };
+    // Capture phase: also catches scrolls of any inner scroll container
+    // (scroll events don't bubble), so one listener covers them all.
+    window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+    return () => window.removeEventListener('scroll', handleScroll, { capture: true });
   }, [editor, menuState?.visible]);
 
   // Close popovers when clicking outside the menu, the popovers,
@@ -247,16 +241,8 @@ export function MediaMenu({ editor, className }: MediaMenuProps): React.ReactEle
 
       // Fallback: find the node again by its id
       if (expectedId !== null) {
-        let found: number | null = null;
-        doc.descendants((node, pos) => {
-          if (found !== null) return false;
-          if (node.type.name === expectedType && node.attrs.id === expectedId) {
-            found = pos;
-            return false;
-          }
-          return true;
-        });
-        return found;
+        const found = findBlockById(doc, expectedId);
+        return found && found.node.type.name === expectedType ? found.pos : null;
       }
 
       return null;

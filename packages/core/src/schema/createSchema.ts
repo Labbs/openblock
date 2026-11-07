@@ -124,7 +124,7 @@ function warnOnDefaultOverrides(
  *
  * @example
  * ```typescript
- * import { createSchema } from '@openblock/core';
+ * import { createSchema } from '@labbs/openblock-core';
  *
  * const schema = createSchema();
  * // schema.nodes.paragraph, schema.marks.bold, etc.

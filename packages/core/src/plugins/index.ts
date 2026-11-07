@@ -62,7 +62,7 @@ export {
   MULTI_BLOCK_SELECTION_KEY,
   selectBlock,
   clearBlockSelection,
-  getSelectedBlocks,
+  getSelectedBlockPositions,
   isMultiBlockSelectionActive,
 } from './multiBlockSelectionPlugin';
 export type { MultiBlockSelectionConfig, MultiBlockSelectionState } from './multiBlockSelectionPlugin';

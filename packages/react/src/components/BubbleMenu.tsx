@@ -8,7 +8,7 @@
  *
  * @example
  * ```tsx
- * import { useOpenBlock, OpenBlockView, BubbleMenu } from '@openblock/react';
+ * import { useOpenBlock, OpenBlockView, BubbleMenu } from '@labbs/openblock-react';
  *
  * function MyEditor() {
  *   const editor = useOpenBlock();
@@ -28,7 +28,7 @@
  *
  * @example Adding a translate button
  * ```tsx
- * import { BubbleMenu, BubbleMenuItem } from '@openblock/react';
+ * import { BubbleMenu, BubbleMenuItem } from '@labbs/openblock-react';
  *
  * // Define a custom "Translate" button
  * const translateItem: BubbleMenuItem = {

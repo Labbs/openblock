@@ -383,7 +383,7 @@ export interface InputRulesConfig {
  *
  * @example
  * ```typescript
- * import { createInputRulesPlugin } from '@openblock/core';
+ * import { createInputRulesPlugin } from '@labbs/openblock-core';
  *
  * const plugin = createInputRulesPlugin(schema, {
  *   headings: true,

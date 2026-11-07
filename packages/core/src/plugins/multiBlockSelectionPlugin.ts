@@ -391,7 +391,7 @@ export function clearBlockSelection(view: EditorView): void {
 /**
  * Get currently selected block positions.
  */
-export function getSelectedBlocks(state: EditorState): number[] {
+export function getSelectedBlockPositions(state: EditorState): number[] {
   const pluginState = MULTI_BLOCK_SELECTION_KEY.getState(state);
   return pluginState?.selectedBlocks || [];
 }

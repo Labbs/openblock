@@ -24,7 +24,7 @@ let stylesInjected = false;
  *
  * @example
  * ```typescript
- * import { injectStyles } from '@openblock/core';
+ * import { injectStyles } from '@labbs/openblock-core';
  *
  * // Automatically inject styles (called by editor by default)
  * injectStyles();
@@ -58,7 +58,7 @@ export function injectStyles(): boolean {
  *
  * @example
  * ```typescript
- * import { removeStyles } from '@openblock/core';
+ * import { removeStyles } from '@labbs/openblock-core';
  *
  * // Clean up when done
  * removeStyles();

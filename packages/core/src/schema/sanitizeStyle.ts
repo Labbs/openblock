@@ -51,18 +51,16 @@ export function sanitizeCssColor(value: unknown): string | null {
   return null;
 }
 
-/**
- * Text alignment values supported by text blocks.
- */
-export type TextAlign = 'left' | 'center' | 'right' | 'justify';
+/** Text alignment values accepted on text blocks ('justify' can come from pasted HTML). */
+type TextAlignValue = 'left' | 'center' | 'right' | 'justify';
 
-const TEXT_ALIGNS: ReadonlySet<string> = new Set<TextAlign>(['left', 'center', 'right', 'justify']);
+const TEXT_ALIGNS: ReadonlySet<string> = new Set<TextAlignValue>(['left', 'center', 'right', 'justify']);
 
 /**
  * Normalizes a text alignment value; anything unknown becomes 'left'.
  */
-export function sanitizeTextAlign(value: unknown): TextAlign {
-  return typeof value === 'string' && TEXT_ALIGNS.has(value) ? (value as TextAlign) : 'left';
+export function sanitizeTextAlign(value: unknown): TextAlignValue {
+  return typeof value === 'string' && TEXT_ALIGNS.has(value) ? (value as TextAlignValue) : 'left';
 }
 
 /**

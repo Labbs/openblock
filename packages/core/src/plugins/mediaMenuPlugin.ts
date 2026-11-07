@@ -112,7 +112,7 @@ function getMediaSelection(state: EditorState): { mediaType: MediaType; pos: num
  *
  * @example
  * ```typescript
- * import { createMediaMenuPlugin, MEDIA_MENU_PLUGIN_KEY } from '@openblock/core';
+ * import { createMediaMenuPlugin, MEDIA_MENU_PLUGIN_KEY } from '@labbs/openblock-core';
  *
  * const plugin = createMediaMenuPlugin();
  *

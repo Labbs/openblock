@@ -164,7 +164,7 @@ function nodeContentToInline(node: PMNode): InlineContent[] {
  * @param marks - Array of ProseMirror marks
  * @returns A TextStyles object
  */
-export function marksToStyles(marks: readonly Mark[]): TextStyles {
+function marksToStyles(marks: readonly Mark[]): TextStyles {
   const styles: TextStyles = {};
 
   for (const mark of marks) {

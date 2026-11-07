@@ -27,6 +27,9 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      # Unused files / exports / dependencies (knip) and unused CSS classes
+      - name: Dead code
+        run: pnpm deadcode
       # Build first: the react package and the example type-check against the built core
       - run: pnpm build
       - run: pnpm typecheck

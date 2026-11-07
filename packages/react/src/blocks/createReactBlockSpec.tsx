@@ -35,6 +35,7 @@ import {
   type NodeViewConstructor,
   Node as PMNode,
   EditorView,
+  findBlockById,
 } from '@labbs/openblock-core';
 
 /**
@@ -339,22 +340,11 @@ export function useUpdateBlock<T extends PropSchema>(
     (updates: Partial<{ [K in keyof T]: T[K]['default'] }>) => {
       if (!editor || editor.isDestroyed) return;
 
-      // Find the block position
-      let pos: number | null = null;
-      editor.pm.doc.descendants((node, nodePos) => {
-        if (node.attrs.id === blockId) {
-          pos = nodePos;
-          return false;
-        }
-      });
-
-      if (pos !== null) {
-        const node = editor.pm.doc.nodeAt(pos);
-        if (node) {
-          const tr = editor.pm.createTransaction();
-          tr.setNodeMarkup(pos, undefined, { ...node.attrs, ...updates });
-          editor.pm.dispatch(tr);
-        }
+      const found = findBlockById(editor.pm.doc, blockId);
+      if (found) {
+        const tr = editor.pm.createTransaction();
+        tr.setNodeMarkup(found.pos, undefined, { ...found.node.attrs, ...updates });
+        editor.pm.dispatch(tr);
       }
     },
     [editor, blockId]

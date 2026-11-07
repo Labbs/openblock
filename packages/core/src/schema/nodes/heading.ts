@@ -9,6 +9,15 @@
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
 import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+import { sanitizeTextAlign } from '../sanitizeStyle';
+
+/**
+ * Clamps a heading level to an integer in 1-6 (defaults to 1).
+ */
+function sanitizeLevel(value: unknown): number {
+  const level = Number(value);
+  return Number.isInteger(level) && level >= 1 && level <= 6 ? level : 1;
+}
 
 /**
  * Heading node spec.
@@ -40,14 +49,16 @@ export const headingNode: NodeSpec = {
     getAttrs: (dom: HTMLElement) => ({
       ...getBlockIdAttrs(dom),
       level,
-      textAlign: dom.style.textAlign || 'left',
+      textAlign: sanitizeTextAlign(dom.style.textAlign),
     }),
   })),
   toDOM(node: PMNode): DOMOutputSpec {
     const attrs: Record<string, string> = { ...blockIdToDOM(node) };
-    if (node.attrs.textAlign && node.attrs.textAlign !== 'left') {
-      attrs.style = `text-align: ${node.attrs.textAlign}`;
+    // Attrs can come from JSON / collaboration, so re-validate here.
+    const textAlign = sanitizeTextAlign(node.attrs.textAlign);
+    if (textAlign !== 'left') {
+      attrs.style = `text-align: ${textAlign}`;
     }
-    return [`h${node.attrs.level}`, attrs, 0];
+    return [`h${sanitizeLevel(node.attrs.level)}`, attrs, 0];
   },
 };

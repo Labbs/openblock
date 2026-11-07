@@ -21,6 +21,7 @@
 import { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
 import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+import { toNonNegativeNumber } from '../sanitizeStyle';
 
 /**
  * Column node spec for ProseMirror.
@@ -54,11 +55,13 @@ export const columnNode: NodeSpec = {
   ],
 
   toDOM(node: PMNode): DOMOutputSpec {
+    // Attrs can come from JSON / collaboration, so re-validate here.
+    const width = toNonNegativeNumber(node.attrs.width) ?? 50;
     const attrs: Record<string, string> = {
       'data-column': '',
-      'data-width': String(node.attrs.width),
+      'data-width': String(width),
       class: 'ob-column',
-      style: `flex: ${node.attrs.width} 0 0; min-width: 0;`,
+      style: `flex: ${width} 0 0; min-width: 0;`,
       ...blockIdToDOM(node),
     };
 

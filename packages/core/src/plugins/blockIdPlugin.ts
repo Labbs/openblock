@@ -7,7 +7,7 @@
  */
 
 import { Plugin, PluginKey } from 'prosemirror-state';
-import { v4 as uuid } from 'uuid';
+import { generateId } from '../utils/generateId';
 
 /**
  * Plugin key for the block ID tracking plugin.
@@ -64,7 +64,7 @@ export function createBlockIdPlugin(): Plugin {
         if (!id || seenIds.has(id)) {
           nodesToUpdate.push({
             pos,
-            attrs: { ...node.attrs, id: uuid() },
+            attrs: { ...node.attrs, id: generateId() },
           });
         } else {
           seenIds.add(id);

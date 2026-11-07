@@ -21,6 +21,7 @@
 import { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
 import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+import { toNonNegativeNumber } from '../sanitizeStyle';
 
 /**
  * ColumnList node spec for ProseMirror.
@@ -53,11 +54,13 @@ export const columnListNode: NodeSpec = {
   ],
 
   toDOM(node: PMNode): DOMOutputSpec {
+    // Attrs can come from JSON / collaboration, so re-validate here.
+    const gap = toNonNegativeNumber(node.attrs.gap) ?? 16;
     const attrs: Record<string, string> = {
       'data-column-list': '',
-      'data-gap': String(node.attrs.gap),
+      'data-gap': String(gap),
       class: 'ob-column-list',
-      style: `gap: ${node.attrs.gap}px`,
+      style: `gap: ${gap}px`,
       ...blockIdToDOM(node),
     };
 

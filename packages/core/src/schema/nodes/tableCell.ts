@@ -25,6 +25,7 @@
 import { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
 import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
+import { sanitizeCssColor, toNonNegativeNumber } from '../sanitizeStyle';
 
 /**
  * Reads the shared cell attributes (id, colwidth, backgroundColor) from a
@@ -42,7 +43,7 @@ function getCellAttrs(dom: HTMLElement): Record<string, unknown> {
   return {
     ...getBlockIdAttrs(dom),
     colwidth: widths.length > 0 ? widths : null,
-    backgroundColor: dom.style.backgroundColor || null,
+    backgroundColor: sanitizeCssColor(dom.style.backgroundColor),
   };
 }
 
@@ -58,13 +59,19 @@ function cellToDOMAttrs(node: PMNode, className: string): Record<string, string>
 
   const styles: string[] = [];
 
-  if (node.attrs.colwidth) {
-    attrs['data-colwidth'] = node.attrs.colwidth.join(',');
-    styles.push(`width: ${node.attrs.colwidth[0]}px`);
+  // Attrs can come from JSON / collaboration (not only parseDOM), so
+  // re-validate everything that ends up in the style attribute.
+  const colwidth = Array.isArray(node.attrs.colwidth)
+    ? node.attrs.colwidth.map(toNonNegativeNumber).filter((w: number | null): w is number => w !== null)
+    : [];
+  if (colwidth.length > 0) {
+    attrs['data-colwidth'] = colwidth.join(',');
+    styles.push(`width: ${colwidth[0]}px`);
   }
 
-  if (node.attrs.backgroundColor) {
-    styles.push(`background-color: ${node.attrs.backgroundColor}`);
+  const backgroundColor = sanitizeCssColor(node.attrs.backgroundColor);
+  if (backgroundColor) {
+    styles.push(`background-color: ${backgroundColor}`);
   }
 
   if (styles.length > 0) {

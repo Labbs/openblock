@@ -1,3 +1,7 @@
 packages:
   - 'packages/*'
   - 'examples/*'
+
+# Supply-chain hardening: never resolve a version published less than
+# 24 hours ago (most malicious releases are detected and pulled within hours).
+minimumReleaseAge: 1440

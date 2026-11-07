@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # npm dependencies of the pnpm workspace (root, packages/*, examples/*)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Same supply-chain delay as pnpm's minimumReleaseAge
+    cooldown:
+      default-days: 3
+    groups:
+      prosemirror:
+        patterns: ['prosemirror-*']
+      dev-tooling:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  # GitHub Actions (pinned by commit SHA)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 3
+    groups:
+      actions:
+        patterns: ['*']

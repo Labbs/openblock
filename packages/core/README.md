@@ -1,4 +1,4 @@
-# @openblock/core
+# @labbs/openblock-core
 
 Framework-agnostic core for the OpenBlock rich text editor.
 
@@ -12,16 +12,16 @@ Framework-agnostic core for the OpenBlock rich text editor.
 ## Installation
 
 ```bash
-npm install @openblock/core
+npm install @labbs/openblock-core
 # or
-pnpm add @openblock/core
+pnpm add @labbs/openblock-core
 ```
 
 ## Quick Start
 
 ```typescript
-import { OpenBlockEditor } from '@openblock/core';
-import '@openblock/core/styles/editor.css';
+import { OpenBlockEditor } from '@labbs/openblock-core';
+import '@labbs/openblock-core/styles/editor.css';
 
 const editor = new OpenBlockEditor({
   element: document.getElementById('editor'),
@@ -77,7 +77,7 @@ editor.pm.addPlugin(myPlugin);
 Import the default styles, which use CSS variables compatible with shadcn/ui:
 
 ```typescript
-import '@openblock/core/styles/editor.css';
+import '@labbs/openblock-core/styles/editor.css';
 ```
 
 Or create your own styles targeting `.openblock-editor` and `.ProseMirror`.

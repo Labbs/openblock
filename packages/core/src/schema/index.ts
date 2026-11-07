@@ -46,3 +46,7 @@ export {
   textColorMark,
   backgroundColorMark,
 } from './marks';
+
+// Sanitization helpers (also used by the React bindings and custom blocks)
+export { sanitizeLinkHref, sanitizeImageSrc, sanitizeEmbedUrl } from './sanitizeUrl';
+export { sanitizeCssColor, sanitizeTextAlign, toNonNegativeNumber } from './sanitizeStyle';

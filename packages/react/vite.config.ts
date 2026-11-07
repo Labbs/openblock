@@ -1,39 +1,40 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
+
+import pkg from './package.json' with { type: 'json' };
+
+/**
+ * Library build for bundlers / Node: ESM (`index.js`) + CommonJS
+ * (`index.cjs`), with React and `@labbs/openblock-core` left external, plus
+ * a single bundled `index.d.ts`.
+ *
+ * The browser bundle is built by `vite.standalone.config.ts`.
+ */
+const external = [
+  ...Object.keys(pkg.dependencies),
+  ...Object.keys(pkg.peerDependencies),
+];
 
 export default defineConfig({
   plugins: [
     dts({
-      insertTypesEntry: true,
+      tsconfigPath: resolve(import.meta.dirname, 'tsconfig.json'),
+      bundleTypes: true,
     }),
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'OpenBlockReact',
-      formats: ['es'],
-      fileName: 'index',
+      entry: resolve(import.meta.dirname, 'src/index.ts'),
+      formats: ['es', 'cjs'],
+      fileName: (format) => (format === 'es' ? 'index.js' : 'index.cjs'),
     },
-    rollupOptions: {
-      external: [
-        'react',
-        'react-dom',
-        'react-dom/client',
-        'react/jsx-runtime',
-        '@labbs/openblock-core',
-        'prosemirror-commands',
-        'prosemirror-dropcursor',
-        'prosemirror-gapcursor',
-        'prosemirror-history',
-        'prosemirror-inputrules',
-        'prosemirror-keymap',
-        'prosemirror-model',
-        'prosemirror-schema-list',
-        'prosemirror-state',
-        'prosemirror-transform',
-        'prosemirror-view',
-      ],
+    rolldownOptions: {
+      // Also externalize subpath imports ('react/jsx-runtime', 'react-dom/client')
+      external: (id) => external.some((dep) => id === dep || id.startsWith(`${dep}/`)),
+      output: {
+        exports: 'named',
+      },
     },
     sourcemap: true,
     minify: false,

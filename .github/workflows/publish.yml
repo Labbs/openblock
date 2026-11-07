@@ -1,62 +1,94 @@
-name: Publish to GitHub Packages
+name: Publish
+
+# Runs when a GitHub Release is published (tag vX.Y.Z or vX.Y.Z-prerelease):
+# 1. publishes @labbs/openblock-core and @labbs/openblock-react to GitHub Packages
+# 2. attaches the ready-to-use builds to the Release:
+#    - standalone browser bundles (openblock-core.esm.js / .iife.js, openblock-react.esm.js)
+#    - openblock.css
+#    - the npm tarballs (installable with `npm install <asset URL>`, no registry token needed)
+#    - SHA256SUMS.txt
 
 on:
   release:
     types: [published]
 
+permissions: {}
+
+concurrency:
+  group: publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      packages: write
+      contents: write # upload release assets
+      packages: write # publish to GitHub Packages
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 8
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      # pnpm version comes from the "packageManager" field of package.json
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      # No dependency cache in the release job (avoids cache poisoning)
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '20'
-          cache: 'pnpm'
+          node-version: '24'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@labbs'
+          package-manager-cache: false
 
-      - name: Extract version from tag
+      - name: Extract and validate version from tag
         id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
         run: |
-          # Remove 'v' prefix from tag (v1.0.0-beta2 -> 1.0.0-beta2)
-          VERSION=${GITHUB_REF_NAME#v}
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Publishing version: $VERSION"
+          VERSION="${TAG#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not a valid version (expected vX.Y.Z or vX.Y.Z-prerelease)"
+            exit 1
+          fi
+          # Pre-releases (1.2.0-beta.1) are published under the "next" dist-tag
+          if [[ "$VERSION" == *-* ]]; then DIST_TAG=next; else DIST_TAG=latest; fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dist_tag=$DIST_TAG" >> "$GITHUB_OUTPUT"
+          echo "Publishing version $VERSION (dist-tag: $DIST_TAG)"
 
-      - name: Update package versions
+      - run: pnpm install --frozen-lockfile
+
+      # `workspace:*` dependencies are rewritten to the exact version by `pnpm publish`
+      - name: Set package versions
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION=${{ steps.version.outputs.version }}
-          # Update core package version
-          cd packages/core
-          npm pkg set version="$VERSION"
-          cd ../react
-          # Update react package version
-          npm pkg set version="$VERSION"
-          # Update dependency on core to use exact version
-          npm pkg set dependencies.@labbs/openblock-core="$VERSION"
-
-      - run: pnpm install --no-frozen-lockfile
+          for pkg in packages/core packages/react; do
+            (cd "$pkg" && npm pkg set version="$VERSION")
+          done
 
       - name: Build packages
+        run: pnpm --filter "./packages/*" build
+
+      - name: Publish to GitHub Packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIST_TAG: ${{ steps.version.outputs.dist_tag }}
+        run: pnpm --filter "./packages/*" publish --access public --no-git-checks --tag "$DIST_TAG"
+
+      - name: Prepare release assets
         run: |
-          pnpm --filter @labbs/openblock-core build
-          pnpm --filter @labbs/openblock-react build
+          mkdir -p release
+          pnpm --filter "./packages/*" pack --pack-destination "$PWD/release"
+          cp packages/core/dist/standalone/openblock-core.esm.js* release/
+          cp packages/core/dist/standalone/openblock-core.iife.js* release/
+          cp packages/react/dist/standalone/openblock-react.esm.js* release/
+          cp packages/core/dist/styles/editor.css release/openblock.css
+          (cd release && sha256sum -- * > SHA256SUMS.txt)
+          ls -la release
 
-      - name: Publish @labbs/openblock-core
-        run: pnpm --filter @labbs/openblock-core publish --access public --no-git-checks
+      - name: Upload assets to the GitHub Release
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Publish @labbs/openblock-react
-        run: pnpm --filter @labbs/openblock-react publish --access public --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" release/* --clobber --repo "$GITHUB_REPOSITORY"

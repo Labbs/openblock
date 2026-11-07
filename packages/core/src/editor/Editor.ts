@@ -26,11 +26,11 @@ import { EditorView } from 'prosemirror-view';
 import { EditorState, Transaction, Plugin, Selection } from 'prosemirror-state';
 import { Schema } from 'prosemirror-model';
 import { history as createHistoryPlugin } from 'prosemirror-history';
-import { v4 as uuid } from 'uuid';
+import { generateId } from '../utils/generateId';
 
 import { ProseMirrorAPI } from '../pm/ProseMirrorAPI';
 import { EditorConfig, defaultConfig, EditorEvents, EventHandler, CollaborationConfig } from './EditorConfig';
-import { createSchema } from '../schema';
+import { createSchema, sanitizeLinkHref } from '../schema';
 import { createPlugins, undo, redo } from '../plugins';
 import { injectStyles } from '../styles/injectStyles';
 import { createPlaceholderPlugin } from '../plugins/placeholderPlugin';
@@ -314,7 +314,7 @@ export class OpenBlockEditor {
     const insertPos = placement === 'before' ? found.pos : found.pos + found.node.nodeSize;
 
     const nodes = blocks.map((block) =>
-      blockToNode(this._schema, { ...block, id: block.id || uuid() } as Block)
+      blockToNode(this._schema, { ...block, id: block.id || generateId() } as Block)
     );
 
     const tr = this.pm.createTransaction();
@@ -581,11 +581,19 @@ export class OpenBlockEditor {
   /**
    * Add a link to the current selection.
    *
+   * Only http:, https:, mailto:, tel: and relative URLs are accepted;
+   * unsafe hrefs (e.g. `javascript:`) are ignored.
+   *
    * @param href - The URL for the link
    * @param title - Optional title attribute
    */
   setLink(href: string, title?: string): void {
-    this.pm.addMark('link', { href, title });
+    const safeHref = sanitizeLinkHref(href);
+    if (safeHref === null) {
+      console.warn(`[OpenBlock] Ignoring link with unsafe href: ${href}`);
+      return;
+    }
+    this.pm.addMark('link', { href: safeHref, title });
   }
 
   /** Remove link from the current selection. */
@@ -789,8 +797,8 @@ export class OpenBlockEditor {
     const blockId = blockNode.attrs.id;
 
     // Create the list structure: list > listItem > paragraph
-    const paragraph = paragraphType.create({ id: uuid() }, content);
-    const listItem = listItemType.create({ id: uuid() }, paragraph);
+    const paragraph = paragraphType.create({ id: generateId() }, content);
+    const listItem = listItemType.create({ id: generateId() }, paragraph);
     const list = listNodeType.create({ id: blockId }, listItem);
 
     const tr = this.pm.createTransaction();

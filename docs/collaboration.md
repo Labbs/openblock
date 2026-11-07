@@ -12,12 +12,12 @@ npm install yjs y-prosemirror y-websocket
 pnpm add yjs y-prosemirror y-websocket
 ```
 
-> `yjs` and `y-prosemirror` are optional peer dependencies of `@openblock/core`. They are only needed if you use collaboration features.
+> `yjs` and `y-prosemirror` are optional peer dependencies of `@labbs/openblock-core`. They are only needed if you use collaboration features.
 
 ## Quick Start
 
 ```typescript
-import { OpenBlockEditor } from '@openblock/core';
+import { OpenBlockEditor } from '@labbs/openblock-core';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
@@ -121,7 +121,7 @@ You can still call `editor.enableHistory()` later to add it at runtime.
 ## Full Example: Toggle Collaboration On/Off
 
 ```typescript
-import { OpenBlockEditor } from '@openblock/core';
+import { OpenBlockEditor } from '@labbs/openblock-core';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
@@ -168,14 +168,14 @@ document.getElementById('collab-toggle')?.addEventListener('click', () => {
 ## Using with React
 
 ```tsx
-import { useOpenBlockEditor } from '@openblock/react';
+import { useOpenBlock, OpenBlockView } from '@labbs/openblock-react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
 import { useEffect, useRef } from 'react';
 
 function CollaborativeEditor({ roomId }: { roomId: string }) {
-  const { editor, ref } = useOpenBlockEditor({});
+  const editor = useOpenBlock({});
   const providerRef = useRef<WebsocketProvider | null>(null);
 
   useEffect(() => {
@@ -201,7 +201,7 @@ function CollaborativeEditor({ roomId }: { roomId: string }) {
     };
   }, [editor, roomId]);
 
-  return <div ref={ref} />;
+  return <OpenBlockView editor={editor} />;
 }
 ```
 

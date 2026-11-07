@@ -152,7 +152,7 @@ export const embedNode: NodeSpec = {
                 frameborder: '0',
                 allowfullscreen: 'true',
                 allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-                sandbox: 'allow-scripts allow-same-origin allow-presentation allow-popups',
+                sandbox: getIframeSandbox(embedUrl),
                 referrerpolicy: 'strict-origin-when-cross-origin',
                 loading: 'lazy',
               },
@@ -169,6 +169,29 @@ export const embedNode: NodeSpec = {
     ];
   },
 };
+
+/**
+ * Returns the sandbox for an embed iframe.
+ *
+ * Most providers need `allow-same-origin` (cookies, storage), but combined
+ * with `allow-scripts` it lets a document from the host page's own origin
+ * remove its sandbox and script the editor. It is therefore dropped when
+ * the embed URL is same-origin with the current page (or cannot be parsed).
+ */
+function getIframeSandbox(embedUrl: string): string {
+  const sandbox = 'allow-scripts allow-presentation allow-popups';
+  // Outside a browser (e.g. server-side serialization) the host origin is
+  // unknown: keep the provider-friendly sandbox.
+  if (typeof window === 'undefined' || !window.location) {
+    return `${sandbox} allow-same-origin`;
+  }
+  try {
+    if (new URL(embedUrl).origin === window.location.origin) return sandbox;
+  } catch {
+    return sandbox;
+  }
+  return `${sandbox} allow-same-origin`;
+}
 
 /**
  * Gets the embed URL for a given provider and embed ID.

@@ -16,7 +16,7 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { OpenBlockEditor } from '@labbs/openblock-core';
+import { OpenBlockEditor, sanitizeLinkHref } from '@labbs/openblock-core';
 import { useClickOutside } from '../hooks/useClickOutside';
 import { LinkIcon } from './icons';
 
@@ -53,7 +53,7 @@ export interface LinkPopoverProps {
    * Reference to the trigger element (e.g., link button).
    * Clicks on this element won't close the popover.
    */
-  triggerRef?: React.RefObject<HTMLElement>;
+  triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
 /**
@@ -155,8 +155,11 @@ export function LinkPopover({
   }, [editor, onClose]);
 
   const handleOpenLink = useCallback(() => {
-    if (currentUrl) {
-      window.open(currentUrl, '_blank', 'noopener,noreferrer');
+    // The href may come from stored/collaborative content: never open
+    // javascript: (or other unsafe) URLs.
+    const safeUrl = sanitizeLinkHref(currentUrl);
+    if (safeUrl) {
+      window.open(safeUrl, '_blank', 'noopener,noreferrer');
     }
   }, [currentUrl]);
 

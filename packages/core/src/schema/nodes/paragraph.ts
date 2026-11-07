@@ -9,6 +9,7 @@
 import type { NodeSpec, DOMOutputSpec, Node as PMNode } from 'prosemirror-model';
 
 import { blockIdAttr, getBlockIdAttrs, blockIdToDOM } from '../blockIdAttrs';
+import { sanitizeTextAlign } from '../sanitizeStyle';
 
 /**
  * Valid text alignment values.
@@ -45,14 +46,16 @@ export const paragraphNode: NodeSpec = {
       const element = dom as HTMLElement;
       return {
         ...getBlockIdAttrs(element),
-        textAlign: element.style.textAlign || 'left',
+        textAlign: sanitizeTextAlign(element.style.textAlign),
       };
     },
   }],
   toDOM(node: PMNode): DOMOutputSpec {
     const attrs: Record<string, string> = { ...blockIdToDOM(node) };
-    if (node.attrs.textAlign && node.attrs.textAlign !== 'left') {
-      attrs.style = `text-align: ${node.attrs.textAlign}`;
+    // Attrs can come from JSON / collaboration, so re-validate here.
+    const textAlign = sanitizeTextAlign(node.attrs.textAlign);
+    if (textAlign !== 'left') {
+      attrs.style = `text-align: ${textAlign}`;
     }
     return ['p', attrs, 0];
   },

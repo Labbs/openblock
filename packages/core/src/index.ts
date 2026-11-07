@@ -105,6 +105,20 @@ export {
   linkMark,
 } from './schema';
 
+// Sanitization helpers - validate user-provided URLs and CSS values before
+// rendering them (useful in custom blocks / node views)
+export {
+  sanitizeLinkHref,
+  sanitizeImageSrc,
+  sanitizeEmbedUrl,
+  sanitizeCssColor,
+  sanitizeTextAlign,
+  toNonNegativeNumber,
+} from './schema';
+
+// Unique block ID generator (random v4 UUID)
+export { generateId } from './utils/generateId';
+
 // ===========================================================================
 // BLOCKS
 // ===========================================================================

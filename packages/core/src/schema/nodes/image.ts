@@ -10,8 +10,17 @@ import type { NodeSpec } from 'prosemirror-model';
 
 import { getBlockIdAttrs, blockIdToDOM, safeParseInt } from '../blockIdAttrs';
 import { sanitizeImageSrc } from '../sanitizeUrl';
+import { toNonNegativeNumber } from '../sanitizeStyle';
 
 export type ImageAlignment = 'left' | 'center' | 'right';
+
+const IMAGE_ALIGNMENTS: readonly string[] = ['left', 'center', 'right'];
+
+function sanitizeAlignment(value: unknown): ImageAlignment {
+  return typeof value === 'string' && IMAGE_ALIGNMENTS.includes(value)
+    ? (value as ImageAlignment)
+    : 'center';
+}
 
 export const imageNode: NodeSpec = {
   group: 'block',
@@ -39,7 +48,7 @@ export const imageNode: NodeSpec = {
           alt: img?.getAttribute('alt') || '',
           caption: element.querySelector('figcaption')?.textContent || '',
           width: safeParseInt(img?.getAttribute('data-width'), null),
-          alignment: element.getAttribute('data-alignment') || 'center',
+          alignment: sanitizeAlignment(element.getAttribute('data-alignment')),
         };
       },
     },
@@ -59,9 +68,11 @@ export const imageNode: NodeSpec = {
     },
   ],
   toDOM: (node) => {
-    const { alt, caption, width, alignment } = node.attrs;
+    const { alt, caption } = node.attrs;
     // Attrs can come from JSON (not only parseDOM), so re-validate here.
     const src = sanitizeImageSrc(node.attrs.src) ?? '';
+    const width = toNonNegativeNumber(node.attrs.width);
+    const alignment = sanitizeAlignment(node.attrs.alignment);
 
     const figureAttrs: Record<string, string> = {
       class: `openblock-image openblock-image--${alignment}`,

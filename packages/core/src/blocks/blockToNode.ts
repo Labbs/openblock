@@ -5,7 +5,7 @@
  */
 
 import { Schema, Node as PMNode, Mark } from 'prosemirror-model';
-import { v4 as uuid } from 'uuid';
+import { generateId } from '../utils/generateId';
 
 import type { Block, InlineContent, TextStyles } from './types';
 
@@ -40,11 +40,11 @@ export function blockToNode(schema: Schema, block: Block): PMNode {
   if (!nodeType) {
     // Fallback to paragraph for unknown block types
     console.warn(`Unknown block type: ${block.type}, falling back to paragraph`);
-    return schema.node('paragraph', { id: block.id || uuid() });
+    return schema.node('paragraph', { id: block.id || generateId() });
   }
 
   const attrs = {
-    id: block.id || uuid(),
+    id: block.id || generateId(),
     ...block.props,
   };
 
@@ -182,7 +182,7 @@ export function blocksToDoc(schema: Schema, blocks?: Block[]): PMNode {
   if (!blocks || blocks.length === 0) {
     // Create empty paragraph as default content
     return schema.node('doc', null, [
-      schema.node('paragraph', { id: uuid() }),
+      schema.node('paragraph', { id: generateId() }),
     ]);
   }
 

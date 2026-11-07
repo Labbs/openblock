@@ -44,17 +44,82 @@ editor.pm.setNodeAttrs(pos, attrs)
 
 ### Installation
 
-First, configure npm to use GitHub Packages for the `@labbs` scope. Create or edit `.npmrc` in your project:
+Each [GitHub Release](https://github.com/Labbs/openblock/releases) provides three ways to get OpenBlock:
+
+#### 1. From GitHub Packages (npm registry)
+
+GitHub Packages requires authentication, even for public packages. Create a
+[personal access token](https://github.com/settings/tokens) with the `read:packages` scope, then add to your project's `.npmrc`:
 
 ```
 @labbs:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
 ```
-
-Then install the packages:
 
 ```bash
 npm install @labbs/openblock-core @labbs/openblock-react
 ```
+
+#### 2. From the Release tarballs (no registry, no token)
+
+The npm packages are attached to every release and can be installed directly from their URL:
+
+```bash
+VERSION=1.0.0
+npm install \
+  https://github.com/Labbs/openblock/releases/download/v$VERSION/labbs-openblock-core-$VERSION.tgz \
+  https://github.com/Labbs/openblock/releases/download/v$VERSION/labbs-openblock-react-$VERSION.tgz
+```
+
+Install both tarballs in the same command: `@labbs/openblock-react` depends on the exact same version of `@labbs/openblock-core`.
+
+#### 3. Standalone browser bundles (no build step)
+
+Each release also ships self-contained, minified builds. Download them and serve them with your app
+(GitHub release downloads cannot be hot-linked from a `<script>` tag):
+
+| File | Contents |
+| --- | --- |
+| `openblock-core.iife.js` | Core + ProseMirror, classic `<script>`, exposes `window.OpenBlock` |
+| `openblock-core.esm.js` | Core + ProseMirror, ES module |
+| `openblock-react.esm.js` | React bindings, ES module (imports `react` and `@labbs/openblock-core`) |
+| `openblock.css` | Editor styles (only needed with `injectStyles: false`) |
+| `SHA256SUMS.txt` | Checksums of all assets |
+
+```html
+<div id="editor"></div>
+<script src="/vendor/openblock-core.iife.js"></script>
+<script>
+  const editor = new OpenBlock.OpenBlockEditor({
+    element: document.getElementById('editor'),
+  });
+</script>
+```
+
+ES modules work the same way (`import { OpenBlockEditor } from '/vendor/openblock-core.esm.js'`).
+For React without a bundler, resolve the bare imports with an import map. Map `@labbs/openblock-core` to the
+core bundle so the page only loads one copy of ProseMirror:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@19",
+      "react/jsx-runtime": "https://esm.sh/react@19/jsx-runtime",
+      "react-dom/client": "https://esm.sh/react-dom@19/client",
+      "@labbs/openblock-core": "/vendor/openblock-core.esm.js"
+    }
+  }
+</script>
+<script type="module">
+  import { useOpenBlock, OpenBlockView } from '/vendor/openblock-react.esm.js';
+</script>
+```
+
+When installed from npm, the same files are available as `@labbs/openblock-core/standalone`,
+`@labbs/openblock-core/standalone/iife` and `@labbs/openblock-react/standalone`.
+
+The npm packages ship ESM and CommonJS builds (`import` and `require` both work) with bundled TypeScript declarations.
 
 ### React
 
@@ -326,16 +391,28 @@ See [Custom Blocks Guide](docs/custom-blocks.md) for more details.
 
 ## Development
 
+Requires Node.js >= 20.19 and pnpm 10 (the exact version is pinned in `package.json` → `corepack enable` picks it up).
+
 ```bash
 # Install dependencies
 pnpm install
 
-# Build all packages
+# Build all packages (ESM + CJS + standalone bundles)
 pnpm build
+
+# Lint and type-check
+pnpm lint
+pnpm typecheck
 
 # Run example in dev mode
 pnpm dev
 ```
+
+### Releasing
+
+Publishing a GitHub Release with a `vX.Y.Z` tag (or `vX.Y.Z-beta.1` for a pre-release, published under the `next` dist-tag) triggers
+`.github/workflows/publish.yml`. It publishes both packages to GitHub Packages and attaches the tarballs,
+standalone bundles, CSS and checksums to the release.
 
 ## License
 
